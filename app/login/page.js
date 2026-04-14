@@ -40,6 +40,7 @@ export default function LoginPage() {
             src="/honeyventlogo.png"
             alt="HoneyVent Logo"
             fill
+            sizes="(max-width: 768px) 100vw, 450px"
             className="object-contain"
             priority
           />
