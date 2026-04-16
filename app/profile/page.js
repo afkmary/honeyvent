@@ -55,6 +55,8 @@ export default function ProfilePage() {
   const [error, setError] = useState("");
   const [showPasswordFields, setShowPasswordFields] = useState(false);
 
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -326,6 +328,8 @@ export default function ProfilePage() {
                           setShowPasswordFields(false);
                           setNewPassword("");
                           setConfirmPassword("");
+                          setShowNewPassword(false);
+                          setShowConfirmPassword(false);
                         }}
                         className="text-sm font-medium text-[#8C8791] hover:underline"
                       >
@@ -333,31 +337,52 @@ export default function ProfilePage() {
                       </button>
                     </div>
 
-                    {/* CHANGE PASSWORD */}
                     <div>
                       <label className="block text-sm font-medium text-[#171717] mb-2">
                         New Password
                       </label>
-                      <input
-                        type="password"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        className="w-full rounded-2xl border border-[#E8DCC8] bg-white px-4 py-3 text-[#171717] placeholder:text-[#B6B6B6] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
-                        placeholder="Enter your new password"
-                      />
+
+                      <div className="relative">
+                        <input
+                          type={showNewPassword ? "text" : "password"}
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          className="w-full rounded-2xl border border-[#E8DCC8] bg-white px-4 py-3 pr-20 text-[#171717] placeholder:text-[#B6B6B6] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
+                          placeholder="Enter your new password"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword((prev) => !prev)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-[#8C8791] hover:text-[#171717] transition"
+                        >
+                          {showNewPassword ? "Hide" : "Show"}
+                        </button>
+                      </div>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-[#171717] mb-2">
                         Confirm New Password
                       </label>
-                      <input
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full rounded-2xl border border-[#E8DCC8] bg-white px-4 py-3 text-[#171717] placeholder:text-[#B6B6B6] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
-                        placeholder="Re-enter your new password"
-                      />
+
+                      <div className="relative">
+                        <input
+                          type={showConfirmPassword ? "text" : "password"}
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          className="w-full rounded-2xl border border-[#E8DCC8] bg-white px-4 py-3 pr-20 text-[#171717] placeholder:text-[#B6B6B6] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
+                          placeholder="Re-enter your new password"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword((prev) => !prev)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-[#8C8791] hover:text-[#171717] transition"
+                        >
+                          {showConfirmPassword ? "Hide" : "Show"}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
