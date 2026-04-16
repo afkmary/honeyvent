@@ -124,10 +124,13 @@ export default function Sidebar() {
 
         {/* LEFT */}
         <div className="flex-1 flex justify-end">
-          <button className="flex items-center gap-2 text-sm text-[#4B474F] hover:text-[#171717] transition">
+          <Link
+            href="/settings"
+            className="flex items-center gap-2 text-sm text-[#4B474F] hover:text-[#171717] transition"
+          >
             <Settings size={16} />
             Settings
-          </button>
+          </Link>
         </div>
 
         {/* DIVIDER */}

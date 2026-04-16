@@ -13,7 +13,7 @@ import {
 import { db } from "@/lib/firebase";
 import { useUserAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/sidebar";
-import DeleteEventModal from "@/components/DeleteEventModal";
+import ConfirmationModal from "@/components/ConfirmationModal";
 
 export default function UpcomingEventsPage() {
   const { user } = useUserAuth();
@@ -166,14 +166,18 @@ export default function UpcomingEventsPage() {
         </section>
       </main>
 
-      <DeleteEventModal
+      {/* DELETE CONFIRMATION MODAL */}
+      <ConfirmationModal
         isOpen={!!selectedEvent}
-        eventName={selectedEvent?.eventName}
+        title="Delete event?"
+        description={`Are you sure you want to delete "${selectedEvent?.eventName || "this event"}"? This action cannot be undone.`}
+        confirmText="Delete"
         onClose={() => {
           if (!deleting) setSelectedEvent(null);
         }}
         onConfirm={confirmDelete}
-        deleting={deleting}
+        loading={deleting}
+        confirmButtonClassName="bg-[#F9E1DC] text-[#B85C47] hover:bg-[#f3d1ca]"
       />
     </>
   );
