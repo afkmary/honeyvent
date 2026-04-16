@@ -4,8 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { useUserAuth } from "@/contexts/AuthContext";
 import { Eye, EyeOff } from "lucide-react";
+import { updateProfile } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { useUserAuth } from "@/contexts/AuthContext";
 
 export default function SignupPage() {
   const { signUp } = useUserAuth();
@@ -29,6 +31,11 @@ export default function SignupPage() {
 
     try {
       await signUp(email, password);
+
+      await updateProfile(auth.currentUser, {
+        displayName: name,
+      });
+
       router.push("/dashboard");
     } catch (err) {
       setError("Failed to create account");
@@ -39,12 +46,10 @@ export default function SignupPage() {
   return (
     <main
       className="min-h-screen flex items-center justify-center px-4 py-6 font-sans bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: "url('/bg.png')" }}
+      style={{ backgroundImage: "url('/honeycombbg.png')" }}
     >
-      <div className="w-full max-w-md rounded-4xl bg-white/88 shadow-xl px-6 pt-4 pb-5 backdrop-blur-sm">
-
-        {/* LOGO */}
-        <div className="relative w-full h-30 -mt-3 mb-1">
+      <div className="w-full max-w-md rounded-[2rem] bg-white/88 shadow-xl px-6 pt-4 pb-5 backdrop-blur-sm">
+        <div className="relative w-full h-[105px] -mt-3 mb-1">
           <Image
             src="/honeyventlogo.png"
             alt="HoneyVent Logo"
@@ -56,13 +61,6 @@ export default function SignupPage() {
         </div>
 
         <div className="flex items-center justify-center gap-2 mb-4">
-
-          <img
-            src="/smallbees.png"
-            alt="bee"
-            className="w-7 h-7 object-contain bee-float translate-y-px"
-          />
-
           <p className="text-[#6B7280] text-base font-medium">
             Start planning in the hive
           </p>
@@ -70,7 +68,7 @@ export default function SignupPage() {
           <img
             src="/smallbees.png"
             alt="bee"
-            className="w-7 h-7 object-contain bee-float translate-y-px"
+            className="w-5 h-5 object-contain bee-float translate-y-[1px]"
           />
         </div>
 
@@ -79,8 +77,6 @@ export default function SignupPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-3">
-
-          {/* NAME */}
           <input
             type="text"
             placeholder="Full Name"
@@ -90,7 +86,6 @@ export default function SignupPage() {
             required
           />
 
-          {/* EMAIL */}
           <input
             type="email"
             placeholder="Email"
@@ -100,7 +95,6 @@ export default function SignupPage() {
             required
           />
 
-          {/* PASSWORD */}
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
@@ -114,13 +108,12 @@ export default function SignupPage() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#F4B942] transition"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#F4B942] transition duration-200"
             >
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
 
-          {/* CONFIRM PASSWORD */}
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
@@ -134,13 +127,12 @@ export default function SignupPage() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#F4B942] transition"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#F4B942] transition duration-200"
             >
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
 
-          {/* SIGNUP BUTTON */}
           <button
             type="submit"
             className="w-full rounded-2xl bg-[#F4B942] py-3 text-white font-semibold transition hover:bg-[#e5a932]"
