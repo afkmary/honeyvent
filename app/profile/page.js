@@ -12,6 +12,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { auth, storage } from "@/lib/firebase";
 import { useUserAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/sidebar";
+import { Eye, EyeOff } from "lucide-react";
 
 function splitName(displayName = "") {
   const trimmed = displayName.trim();
@@ -354,9 +355,9 @@ export default function ProfilePage() {
                         <button
                           type="button"
                           onClick={() => setShowNewPassword((prev) => !prev)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-[#8C8791] hover:text-[#171717] transition"
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8C8791] hover:text-[#171717] transition"
                         >
-                          {showNewPassword ? "Hide" : "Show"}
+                          {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
                       </div>
                     </div>
@@ -378,9 +379,9 @@ export default function ProfilePage() {
                         <button
                           type="button"
                           onClick={() => setShowConfirmPassword((prev) => !prev)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-[#8C8791] hover:text-[#171717] transition"
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8C8791] hover:text-[#171717] transition"
                         >
-                          {showConfirmPassword ? "Hide" : "Show"}
+                          {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
                       </div>
                     </div>
