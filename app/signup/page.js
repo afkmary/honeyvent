@@ -60,18 +60,6 @@ export default function SignupPage() {
           />
         </div>
 
-        <div className="flex items-center justify-center gap-2 mb-4">
-          <p className="text-[#6B7280] text-base font-medium">
-            Start planning in the hive
-          </p>
-
-          <img
-            src="/smallbees.png"
-            alt="bee"
-            className="w-5 h-5 object-contain bee-float translate-y-px"
-          />
-        </div>
-
         {error && (
           <p className="mb-3 text-sm text-red-500 text-center">{error}</p>
         )}
