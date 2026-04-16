@@ -46,10 +46,10 @@ export default function SignupPage() {
   return (
     <main
       className="min-h-screen flex items-center justify-center px-4 py-6 font-sans bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: "url('/honeycombbg.png')" }}
+      style={{ backgroundImage: "url('/bg.png')" }}
     >
-      <div className="w-full max-w-md rounded-[2rem] bg-white/88 shadow-xl px-6 pt-4 pb-5 backdrop-blur-sm">
-        <div className="relative w-full h-[105px] -mt-3 mb-1">
+      <div className="w-full max-w-md rounded-4xl bg-white/88 shadow-xl px-6 pt-4 pb-5 backdrop-blur-sm">
+        <div className="relative w-full h-26.25 -mt-3 mb-1">
           <Image
             src="/honeyventlogo.png"
             alt="HoneyVent Logo"
@@ -68,7 +68,7 @@ export default function SignupPage() {
           <img
             src="/smallbees.png"
             alt="bee"
-            className="w-5 h-5 object-contain bee-float translate-y-[1px]"
+            className="w-5 h-5 object-contain bee-float translate-y-px"
           />
         </div>
 
