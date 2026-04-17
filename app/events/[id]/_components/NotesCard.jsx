@@ -48,7 +48,10 @@ export default function NotesCard({
               className="rounded-2xl bg-[#FFF8EF] border border-[#F3E6CB] px-4 py-3 flex items-start justify-between gap-3"
             >
               <div className="min-w-0 flex-1">
-                <p className="text-[#171717] wrap-break-word">
+                <p
+                  title={note.text}
+                  className="text-[#171717] text-sm leading-6 line-clamp-3 break-words"
+                >
                   {note.text}
                 </p>
               </div>

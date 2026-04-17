@@ -73,10 +73,16 @@ export default function GuestListCard({
                 className="rounded-2xl bg-[#FFF8EF] border border-[#F3E6CB] px-4 py-3 flex items-start justify-between gap-3"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-[#171717] font-medium wrap-break-word">
+                  <p
+                    title={guest.name}
+                    className="text-[#171717] font-medium truncate"
+                  >
                     {guest.name}
                   </p>
-                  <p className="text-sm text-[#8C8791] capitalize wrap-break-word">
+                  <p
+                    title={guest.status || "invited"}
+                    className="text-sm text-[#8C8791] capitalize truncate"
+                  >
                     {guest.status || "invited"}
                   </p>
                 </div>

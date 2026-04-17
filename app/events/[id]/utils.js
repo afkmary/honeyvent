@@ -33,3 +33,20 @@ export function formatTimeRange(start, end) {
   if (start && end) return `${start} - ${end}`;
   return start || end;
 }
+
+export function getSafeGuestList(eventData) {
+  return Array.isArray(eventData?.guestList) ? eventData.guestList : [];
+}
+
+export function getSafeChecklist(eventData) {
+  return Array.isArray(eventData?.checklist) ? eventData.checklist : [];
+}
+
+export function getSafeNotes(eventData) {
+  return Array.isArray(eventData?.notes) ? eventData.notes : [];
+}
+
+export function getSelectedTask(checklist, selectedTaskIndex) {
+  if (selectedTaskIndex === null) return null;
+  return checklist[selectedTaskIndex] || null;
+}

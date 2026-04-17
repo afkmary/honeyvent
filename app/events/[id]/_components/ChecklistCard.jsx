@@ -124,15 +124,19 @@ export default function ChecklistCard({
 
                         <div className="min-w-0 flex-1">
                           <p
-                            className={`font-medium wrap-break-word ${item.completed
-                              ? "text-[#8C8791] line-through"
-                              : "text-[#171717]"
+                            title={item.text}
+                            className={`font-medium line-clamp-2 break-words ${item.completed
+                                ? "text-[#8C8791] line-through"
+                                : "text-[#171717]"
                               }`}
                           >
                             {item.text}
                           </p>
 
-                          <p className="text-sm text-[#8C8791] wrap-break-word">
+                          <p
+                            title={`${item.completed ? "Completed" : "Pending"}${item.note?.trim() ? " • Has note" : ""}`}
+                            className="text-sm text-[#8C8791] truncate"
+                          >
                             {item.completed ? "Completed" : "Pending"}
                             {item.note?.trim() ? " • Has note" : ""}
                           </p>
@@ -165,7 +169,10 @@ export default function ChecklistCard({
         removeChecklistItem={removeChecklistItem}
         toggleChecklistItem={toggleChecklistItem}
         selectedTaskIndex={selectedTaskIndex}
-        onSelectTask={onSelectTask}
+        onSelectTask={(index) => {
+          setShowChecklistModal(false);
+          onSelectTask?.(index);
+        }}
       />
     </>
   );
