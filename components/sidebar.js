@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -11,11 +12,15 @@ import {
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useUserAuth } from "@/contexts/AuthContext";
+import { db } from "@/lib/firebase";
+import { collection, getDocs } from "firebase/firestore";
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logOut } = useUserAuth();
+
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
 
   async function handleLogout() {
     try {
@@ -35,6 +40,95 @@ export default function Sidebar() {
       ? "bg-[#F7E4C3] text-[#171717] font-medium"
       : "text-[#7A7480] hover:bg-[#F9F4EA]"
     }`;
+
+  function convertTo24Hour(timeString = "") {
+    const value = String(timeString).trim().toUpperCase();
+
+    if (!value) return "00:00";
+
+    const match = value.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);
+    if (!match) return "00:00";
+
+    let hour = parseInt(match[1], 10);
+    const minute = match[2];
+    const period = match[3];
+
+    if (period === "PM" && hour !== 12) hour += 12;
+    if (period === "AM" && hour === 12) hour = 0;
+
+    return `${String(hour).padStart(2, "0")}:${minute}`;
+  }
+
+  function parseEventDate(event) {
+    if (!event?.startDate) return null;
+
+    const [year, month, day] = event.startDate.split("-");
+
+    return new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      0,
+      0,
+      0
+    );
+  }
+
+  function formatSidebarDate(date) {
+    return new Intl.DateTimeFormat("en-CA", {
+      month: "short",
+      day: "numeric",
+    }).format(date);
+  }
+
+  useEffect(() => {
+    async function loadUpcomingEvents() {
+      if (!user?.uid) {
+        setUpcomingEvents([]);
+        return;
+      }
+
+      try {
+        const snapshot = await getDocs(
+          collection(db, "users", user.uid, "events")
+        );
+
+        const now = new Date();
+
+        const events = snapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          .map((event) => ({
+            ...event,
+            parsedDate: parseEventDate(event),
+          }))
+          .filter((event) => {
+            if (!event.parsedDate) return false;
+
+            const today = new Date(
+              now.getFullYear(),
+              now.getMonth(),
+              now.getDate()
+            );
+
+            return event.parsedDate >= today;
+          })
+          .sort((a, b) => a.parsedDate - b.parsedDate)
+          .slice(0, 2);
+
+        setUpcomingEvents(events);
+
+        console.log("sidebar events:", events);
+      } catch (error) {
+        console.error("Failed to load upcoming events:", error);
+        setUpcomingEvents([]);
+      }
+    }
+
+    loadUpcomingEvents();
+  }, [user?.uid, pathname]);
 
   return (
     <aside className="w-[320px] min-h-screen bg-white border-r border-[#EEE7DA] flex flex-col justify-between px-7 py-6">
@@ -111,6 +205,25 @@ export default function Sidebar() {
             <div className="h-px flex-1 bg-[#D9D2C6]" />
           </div>
 
+          {upcomingEvents.length > 0 && (
+            <div className="space-y-3 mb-5">
+              {upcomingEvents.map((event) => (
+                <button
+                  key={event.id}
+                  onClick={() => router.push(`/events/${event.id}`)}
+                  className="group w-full cursor-pointer rounded-2xl border border-[#EEE7DA] bg-[#FAF8F3] px-4 py-3 text-left transition-all duration-200 hover:bg-[#F7F1E7] hover:border-[#E3C56A] hover:shadow-sm active:scale-[0.98]"
+                >
+                  <p className="truncate text-sm font-semibold text-[#171717] transition group-hover:text-[#A07F28]">
+                    {event.eventName || "Untitled Event"}
+                  </p>
+                  <p className="mt-1 text-xs text-[#8C8791]">
+                    {formatSidebarDate(event.parsedDate)}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
+
           <button
             onClick={() => router.push("/events/create")}
             className="w-full rounded-full bg-[#E3C56A] px-4 py-3 text-sm font-semibold text-[#5A4A1F] hover:bg-[#d9b954] transition"
@@ -121,8 +234,6 @@ export default function Sidebar() {
       </div>
 
       <div className="flex items-center pt-6">
-
-        {/* LEFT */}
         <div className="flex-1 flex justify-end">
           <Link
             href="/settings"
@@ -133,10 +244,8 @@ export default function Sidebar() {
           </Link>
         </div>
 
-        {/* DIVIDER */}
         <div className="mx-8 h-7 w-px bg-[#CFC8BC]" />
 
-        {/* RIGHT */}
         <div className="flex-1 flex justify-start">
           <button
             onClick={handleLogout}
