@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Pencil, Trash2 } from "lucide-react";
 import GuestListModal from "./GuestListModal";
 
 export default function GuestListCard({
@@ -9,12 +10,33 @@ export default function GuestListCard({
   setGuestInput,
   addGuest,
   removeGuest,
+  updateGuestName,
   saving,
   guestError,
 }) {
   const [showGuestModal, setShowGuestModal] = useState(false);
+  const [editingGuestIndex, setEditingGuestIndex] = useState(null);
+  const [editingGuestName, setEditingGuestName] = useState("");
 
   const visibleGuests = guestList.slice(0, 7);
+
+  function startEditingGuest(index, currentName) {
+    setEditingGuestIndex(index);
+    setEditingGuestName(currentName);
+  }
+
+  async function saveEditedGuest(index) {
+    const trimmed = editingGuestName.trim();
+    if (!trimmed) {
+      setEditingGuestIndex(null);
+      setEditingGuestName("");
+      return;
+    }
+
+    await updateGuestName(index, trimmed);
+    setEditingGuestIndex(null);
+    setEditingGuestName("");
+  }
 
   return (
     <>
@@ -73,12 +95,31 @@ export default function GuestListCard({
                 className="rounded-2xl bg-[#FFF8EF] border border-[#F3E6CB] px-4 py-3 flex items-start justify-between gap-3"
               >
                 <div className="min-w-0 flex-1">
-                  <p
-                    title={guest.name}
-                    className="text-[#171717] font-medium truncate"
-                  >
-                    {guest.name}
-                  </p>
+                  {editingGuestIndex === index ? (
+                    <input
+                      type="text"
+                      value={editingGuestName}
+                      onChange={(e) => setEditingGuestName(e.target.value)}
+                      onBlur={() => saveEditedGuest(index)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveEditedGuest(index);
+                        if (e.key === "Escape") {
+                          setEditingGuestIndex(null);
+                          setEditingGuestName("");
+                        }
+                      }}
+                      autoFocus
+                      className="w-full rounded-lg border border-[#E8DCC8] bg-white px-2 py-1 text-sm text-[#171717] outline-none focus:border-[#F4B942]"
+                    />
+                  ) : (
+                    <p
+                      title={guest.name}
+                      className="text-[#171717] truncate"
+                    >
+                      {guest.name}
+                    </p>
+                  )}
+
                   <p
                     title={guest.status || "invited"}
                     className="text-sm text-[#8C8791] capitalize truncate"
@@ -87,13 +128,25 @@ export default function GuestListCard({
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => removeGuest(index)}
-                  className="shrink-0 self-start text-sm text-[#D47D69] hover:text-[#bb5f49] transition"
-                >
-                  Remove
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => startEditingGuest(index, guest.name)}
+                    className="rounded-full p-2 text-[#8C8791] hover:bg-[#F7F2E8] hover:text-[#5f5a63] transition"
+                    title="Edit guest"
+                  >
+                    <Pencil size={15} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => removeGuest(index)}
+                    className="rounded-full p-2 text-[#D47D69] hover:bg-[#FFF1ED] hover:text-[#bb5f49] transition"
+                    title="Remove guest"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
               </div>
             ))
           )}
@@ -105,6 +158,7 @@ export default function GuestListCard({
         onClose={() => setShowGuestModal(false)}
         guestList={guestList}
         removeGuest={removeGuest}
+        updateGuestName={updateGuestName}
       />
     </>
   );

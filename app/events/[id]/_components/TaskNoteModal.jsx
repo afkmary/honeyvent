@@ -1,18 +1,21 @@
 "use client";
 
-import { useEffect } from "react";
-import { X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Pencil, Trash2, X } from "lucide-react";
 
 export default function TaskNoteModal({
   open,
   selectedTask,
+  selectedTaskIndex,
   selectedTaskNoteInput,
   setSelectedTaskNoteInput,
   closeTaskNoteModal,
   clearSelectedTaskNote,
-  saveSelectedTaskNote,
+  saveTaskDetails,
   isSaving,
 }) {
+  const [taskTextInput, setTaskTextInput] = useState("");
+
   useEffect(() => {
     if (!open) return;
 
@@ -31,7 +34,19 @@ export default function TaskNoteModal({
     };
   }, [open, closeTaskNoteModal]);
 
+  useEffect(() => {
+    if (selectedTask) {
+      setTaskTextInput(selectedTask.text || "");
+    }
+  }, [selectedTask]);
+
   if (!open || !selectedTask) return null;
+
+  async function handleSaveTaskDetails() {
+    if (selectedTaskIndex === null) return;
+
+    await saveTaskDetails(selectedTaskIndex, taskTextInput, selectedTaskNoteInput);
+  }
 
   return (
     <div
@@ -50,20 +65,24 @@ export default function TaskNoteModal({
           <X size={18} />
         </button>
 
-        <div className="mb-4">
-          <div className="mb-3 inline-flex items-center rounded-full bg-[#FFF3D6] px-3 py-1 text-xs font-semibold text-[#C98C00]">
-            Task Note
-          </div>
-
-          <div className="rounded-2xl border border-[#F3E6CB] bg-[#FFF8EF] px-4 py-3">
-            <p className="mb-1 text-sm text-[#8C8791]">Task</p>
-            <p className="wrap-break-word font-medium text-[#171717]">
-              {selectedTask.text}
-            </p>
-          </div>
+        <div className="mb-4 inline-flex items-center rounded-full bg-[#FFF3D6] px-3 py-1 text-xs font-semibold text-[#C98C00]">
+          Task Details
         </div>
 
         <div className="space-y-4">
+          <div>
+            <label className="mb-2 flex items-center gap-2 text-sm font-medium text-[#171717]">
+              <Pencil size={15} />
+              Task name
+            </label>
+            <input
+              type="text"
+              value={taskTextInput}
+              onChange={(e) => setTaskTextInput(e.target.value)}
+              className="w-full rounded-2xl border border-[#E8DCC8] bg-[#FFFDF8] px-4 py-3 text-sm text-[#171717] outline-none placeholder:text-[#C4B8A5] focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
+            />
+          </div>
+
           <div>
             <label className="mb-2 block text-sm font-medium text-[#171717]">
               Note for this task
@@ -83,18 +102,19 @@ export default function TaskNoteModal({
               type="button"
               onClick={clearSelectedTaskNote}
               disabled={isSaving}
-              className="rounded-full border border-[#E8DCC8] bg-white px-5 py-3 text-sm font-semibold text-[#6B7280] transition hover:bg-[#FFF8EF] disabled:opacity-70"
+              className="inline-flex items-center gap-2 rounded-full border border-[#E8DCC8] bg-white px-5 py-3 text-sm font-semibold text-[#6B7280] transition hover:bg-[#FFF8EF] disabled:opacity-70"
             >
+              <Trash2 size={15} />
               Clear Note
             </button>
 
             <button
               type="button"
-              onClick={saveSelectedTaskNote}
+              onClick={handleSaveTaskDetails}
               disabled={isSaving}
               className="rounded-full bg-[#E3C56A] px-5 py-3 text-sm font-semibold text-[#5A4A1F] transition hover:bg-[#d9b954] disabled:opacity-70"
             >
-              {isSaving ? "Saving..." : "Save Note"}
+              {isSaving ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </div>

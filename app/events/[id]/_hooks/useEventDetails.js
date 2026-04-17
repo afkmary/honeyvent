@@ -135,6 +135,31 @@ export default function useEventDetails({ user, router, eventId }) {
     setGuestError("");
   }
 
+  async function updateGuestName(indexToUpdate, newName) {
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+
+    const normalizedInput = trimmed.toLowerCase();
+
+    const alreadyExists = guestList.some(
+      (guest, index) =>
+        index !== indexToUpdate &&
+        guest.name?.trim().toLowerCase() === normalizedInput
+    );
+
+    if (alreadyExists) {
+      setGuestError("That guest is already on the list.");
+      return;
+    }
+
+    const updatedGuests = guestList.map((guest, index) =>
+      index === indexToUpdate ? { ...guest, name: trimmed } : guest
+    );
+
+    await saveField("guestList", updatedGuests, "guest");
+    setGuestError("");
+  }
+
   async function addChecklistItem() {
     const trimmed = checklistInput.trim();
     if (!trimmed) return;
@@ -169,6 +194,17 @@ export default function useEventDetails({ user, router, eventId }) {
   async function toggleChecklistItem(indexToToggle) {
     const updatedChecklist = checklist.map((item, index) =>
       index === indexToToggle ? { ...item, completed: !item.completed } : item
+    );
+
+    await saveField("checklist", updatedChecklist, "checklist");
+  }
+
+  async function updateChecklistItemText(indexToUpdate, newText) {
+    const trimmed = newText.trim();
+    if (!trimmed) return;
+
+    const updatedChecklist = checklist.map((item, index) =>
+      index === indexToUpdate ? { ...item, text: trimmed } : item
     );
 
     await saveField("checklist", updatedChecklist, "checklist");
@@ -211,6 +247,24 @@ export default function useEventDetails({ user, router, eventId }) {
     setSelectedTaskNoteInput("");
   }
 
+  async function saveTaskDetails(indexToUpdate, newText, newNote) {
+    const trimmedText = newText.trim();
+    if (!trimmedText) return;
+
+    const updatedChecklist = checklist.map((item, index) =>
+      index === indexToUpdate
+        ? {
+          ...item,
+          text: trimmedText,
+          note: newNote.trim(),
+        }
+        : item
+    );
+
+    await saveField("checklist", updatedChecklist, "checklist");
+    setShowTaskNoteModal(false);
+  }
+
   async function addNote() {
     const trimmed = notesInput.trim();
     if (!trimmed) return;
@@ -228,6 +282,17 @@ export default function useEventDetails({ user, router, eventId }) {
 
   async function removeNote(indexToRemove) {
     const updatedNotes = notes.filter((_, index) => index !== indexToRemove);
+    await saveField("notes", updatedNotes, "note");
+  }
+
+  async function updateNoteText(indexToUpdate, newText) {
+    const trimmed = newText.trim();
+    if (!trimmed) return;
+
+    const updatedNotes = notes.map((note, index) =>
+      index === indexToUpdate ? { ...note, text: trimmed } : note
+    );
+
     await saveField("notes", updatedNotes, "note");
   }
 
@@ -258,15 +323,21 @@ export default function useEventDetails({ user, router, eventId }) {
 
     addGuest,
     removeGuest,
+    updateGuestName,
+
     addChecklistItem,
     removeChecklistItem,
     toggleChecklistItem,
+    updateChecklistItemText,
+
     addNote,
     removeNote,
+    updateNoteText,
 
     selectTask,
     closeTaskNoteModal,
     saveSelectedTaskNote,
     clearSelectedTaskNote,
+    saveTaskDetails,
   };
 }

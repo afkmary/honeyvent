@@ -1,16 +1,43 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search, X } from "lucide-react";
+import { Pencil, Trash2, X } from "lucide-react";
 
 export default function GuestListModal({
   open,
   onClose,
   guestList,
   removeGuest,
+  updateGuestName,
 }) {
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editingName, setEditingName] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortOption, setSortOption] = useState("az");
+  const [sortBy, setSortBy] = useState("oldest");
+
+  const filteredGuests = useMemo(() => {
+    let results = guestList.map((guest, index) => ({
+      ...guest,
+      originalIndex: index,
+    }));
+
+    const query = searchTerm.trim().toLowerCase();
+    if (query) {
+      results = results.filter((guest) =>
+        `${guest.name || ""} ${guest.status || ""}`.toLowerCase().includes(query)
+      );
+    }
+
+    if (sortBy === "a-z") {
+      results.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    } else if (sortBy === "newest") {
+      results.sort((a, b) => b.originalIndex - a.originalIndex);
+    } else {
+      results.sort((a, b) => a.originalIndex - b.originalIndex);
+    }
+
+    return results;
+  }, [guestList, searchTerm, sortBy]);
 
   useEffect(() => {
     if (!open) return;
@@ -28,34 +55,25 @@ export default function GuestListModal({
     };
   }, [open, onClose]);
 
-  const filteredGuests = useMemo(() => {
-    let updatedGuests = guestList.map((guest, index) => ({
-      ...guest,
-      originalIndex: index,
-    }));
-
-    if (searchTerm.trim()) {
-      updatedGuests = updatedGuests.filter((guest) =>
-        guest.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (sortOption === "az") {
-      updatedGuests.sort((a, b) => a.name.localeCompare(b.name));
-    }
-
-    if (sortOption === "newest") {
-      updatedGuests.sort((a, b) => b.originalIndex - a.originalIndex);
-    }
-
-    if (sortOption === "oldest") {
-      updatedGuests.sort((a, b) => a.originalIndex - b.originalIndex);
-    }
-
-    return updatedGuests;
-  }, [guestList, searchTerm, sortOption]);
-
   if (!open) return null;
+
+  function startEditing(index, currentName) {
+    setEditingIndex(index);
+    setEditingName(currentName);
+  }
+
+  async function saveEdit(index) {
+    const trimmed = editingName.trim();
+    if (!trimmed) {
+      setEditingIndex(null);
+      setEditingName("");
+      return;
+    }
+
+    await updateGuestName(index, trimmed);
+    setEditingIndex(null);
+    setEditingName("");
+  }
 
   return (
     <div
@@ -70,10 +88,10 @@ export default function GuestListModal({
           <div className="mb-4 flex items-start justify-between gap-4">
             <div>
               <h3 className="text-xl font-semibold text-[#171717]">
-                All Attendees
+                All Guests
               </h3>
               <p className="text-sm text-[#8C8791]">
-                {filteredGuests.length} shown • {guestList.length} total
+                {filteredGuests.length} shown • {guestList.length} total guests
               </p>
             </div>
 
@@ -86,97 +104,122 @@ export default function GuestListModal({
             </button>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <div className="relative flex-1">
-              <Search
-                size={16}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-[#C4B8A5]"
-              />
-              <input
-                type="text"
-                placeholder="Search attendees"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full rounded-full border border-[#E8DCC8] bg-[#FFFDF8] py-3 pl-11 pr-4 text-sm text-[#171717] placeholder:text-[#C4B8A5] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
-              />
-            </div>
+          <div className="flex flex-col gap-3">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search guests"
+              className="min-w-0 w-full rounded-full border border-[#E8DCC8] bg-[#FFFDF8] px-4 py-2 text-sm text-[#171717] outline-none placeholder:text-[#C4B8A5] focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
+            />
 
             <div className="flex flex-wrap gap-2 font-sans">
               <button
                 type="button"
-                onClick={() => setSortOption("az")}
-                className={`rounded-full px-4 py-3 text-sm transition ${sortOption === "az"
-                    ? "bg-[#F4B942] text-white"
-                    : "border border-[#E8DCC8] bg-[#FFFDF8] text-[#171717]"
+                onClick={() => setSortBy("a-z")}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${sortBy === "a-z"
+                  ? "bg-[#F4B942] text-white"
+                  : "border border-[#E8DCC8] bg-[#FFFDF8] text-[#8C8791] hover:bg-[#FFF8EF]"
                   }`}
               >
-                A → Z
+                A–Z
               </button>
 
               <button
                 type="button"
-                onClick={() => setSortOption("newest")}
-                className={`rounded-full px-4 py-3 text-sm transition ${sortOption === "newest"
-                    ? "bg-[#F4B942] text-white"
-                    : "border border-[#E8DCC8] bg-[#FFFDF8] text-[#171717]"
+                onClick={() => setSortBy("oldest")}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${sortBy === "oldest"
+                  ? "bg-[#F4B942] text-white"
+                  : "border border-[#E8DCC8] bg-[#FFFDF8] text-[#8C8791] hover:bg-[#FFF8EF]"
                   }`}
               >
-                Newest to oldest
+                Oldest
               </button>
 
               <button
                 type="button"
-                onClick={() => setSortOption("oldest")}
-                className={`rounded-full px-4 py-3 text-sm transition ${sortOption === "oldest"
-                    ? "bg-[#F4B942] text-white"
-                    : "border border-[#E8DCC8] bg-[#FFFDF8] text-[#171717]"
+                onClick={() => setSortBy("newest")}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${sortBy === "newest"
+                  ? "bg-[#F4B942] text-white"
+                  : "border border-[#E8DCC8] bg-[#FFFDF8] text-[#8C8791] hover:bg-[#FFF8EF]"
                   }`}
               >
-                Oldest to newest
+                Newest
               </button>
             </div>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5 min-h-0">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5">
           {filteredGuests.length === 0 ? (
-            <p className="text-sm text-[#8C8791]">No matching guests found.</p>
+            <p className="text-sm text-[#8C8791]">No guests found.</p>
           ) : (
             <div className="space-y-3">
-              {filteredGuests.map((guest) => (
-                <div
-                  key={`${guest.name}-${guest.originalIndex}`}
-                  className="rounded-2xl bg-[#FFF8EF] border border-[#F3E6CB] px-4 py-3 flex items-start justify-between gap-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[#171717] font-medium wrap-break-word">
-                      {guest.name}
-                    </p>
-                    <p className="text-sm text-[#8C8791] capitalize wrap-break-word">
-                      {guest.status || "invited"}
-                    </p>
-                  </div>
+              {filteredGuests.map((guest, index) => {
+                const originalIndex = guest.originalIndex;
 
-                  <button
-                    type="button"
-                    onClick={() => removeGuest(guest.originalIndex)}
-                    className="shrink-0 self-start text-sm text-[#D47D69] hover:text-[#bb5f49] transition"
+                return (
+                  <div
+                    key={`${guest.name}-${originalIndex}`}
+                    className="rounded-2xl border border-[#F3E6CB] bg-[#FFF8EF] px-4 py-3 flex items-start justify-between gap-3"
                   >
-                    Remove
-                  </button>
-                </div>
-              ))}
+                    <div className="min-w-0 flex-1">
+                      {editingIndex === originalIndex ? (
+                        <input
+                          type="text"
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          onBlur={() => saveEdit(originalIndex)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") saveEdit(originalIndex);
+                            if (e.key === "Escape") {
+                              setEditingIndex(null);
+                              setEditingName("");
+                            }
+                          }}
+                          autoFocus
+                          className="w-full rounded-lg border border-[#E8DCC8] bg-white px-2 py-1 text-sm text-[#171717] outline-none focus:border-[#F4B942]"
+                        />
+                      ) : (
+                        <p
+                          title={guest.name}
+                          className="font-sans text-[#171717] truncate"
+                        >
+                          {guest.name}
+                        </p>
+                      )}
+
+                      <p className="text-sm text-[#8C8791] capitalize truncate">
+                        {guest.status || "invited"}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => startEditing(originalIndex, guest.name)}
+                        className="rounded-full p-2 text-[#8C8791] hover:bg-[#F7F2E8] hover:text-[#5f5a63] transition"
+                        title="Edit guest"
+                      >
+                        <Pencil size={15} />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => removeGuest(originalIndex)}
+                        className="rounded-full p-2 text-[#D47D69] hover:bg-[#FFF1ED] hover:text-[#bb5f49] transition"
+                        title="Remove guest"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
       </div>
-
-      <button
-        type="button"
-        aria-label="Close modal overlay"
-        onClick={onClose}
-        className="absolute inset-0 -z-10 cursor-default"
-      />
     </div>
   );
 }

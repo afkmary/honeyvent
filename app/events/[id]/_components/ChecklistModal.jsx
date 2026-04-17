@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
-import { X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Pencil, Trash2, X } from "lucide-react";
 
 export default function ChecklistModal({
   open,
@@ -9,9 +9,13 @@ export default function ChecklistModal({
   checklist,
   removeChecklistItem,
   toggleChecklistItem,
+  updateChecklistItemText,
   selectedTaskIndex,
   onSelectTask,
 }) {
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editingText, setEditingText] = useState("");
+
   useEffect(() => {
     if (!open) return;
 
@@ -42,6 +46,24 @@ export default function ChecklistModal({
 
   if (!open) return null;
 
+  function startEditing(index, currentText) {
+    setEditingIndex(index);
+    setEditingText(currentText);
+  }
+
+  async function saveEdit(index) {
+    const trimmed = editingText.trim();
+    if (!trimmed) {
+      setEditingIndex(null);
+      setEditingText("");
+      return;
+    }
+
+    await updateChecklistItemText(index, trimmed);
+    setEditingIndex(null);
+    setEditingText("");
+  }
+
   const renderTask = (item) => {
     const index = item.originalIndex;
     const isSelected = selectedTaskIndex === index;
@@ -68,32 +90,74 @@ export default function ChecklistModal({
           />
 
           <div className="min-w-0 flex-1">
-            <p
-              className={`font-medium wrap-break-word ${item.completed
-                ? "text-[#8C8791] line-through"
-                : "text-[#171717]"
-                }`}
-            >
-              {item.text}
-            </p>
+            {editingIndex === index ? (
+              <input
+                type="text"
+                value={editingText}
+                onChange={(e) => setEditingText(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onBlur={() => saveEdit(index)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveEdit(index);
+                  if (e.key === "Escape") {
+                    setEditingIndex(null);
+                    setEditingText("");
+                  }
+                }}
+                autoFocus
+                className="w-full rounded-lg border border-[#E8DCC8] bg-white px-2 py-1 text-sm text-[#171717] outline-none focus:border-[#F4B942]"
+              />
+            ) : (
+              <p
+                title={item.text}
+                className={`font-sans overflow-hidden ${item.completed
+                  ? "text-[#8C8791] line-through"
+                  : "text-[#171717]"
+                  }`}
+                style={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 2,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {item.text}
+              </p>
+            )}
 
-            <p className="text-sm text-[#8C8791] wrap-break-word">
+            <p className="text-sm text-[#8C8791] truncate">
               {item.completed ? "Completed" : "Pending"}
               {item.note?.trim() ? " • Has note" : ""}
             </p>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            removeChecklistItem(index);
-          }}
-          className="shrink-0 self-start text-sm text-[#D47D69] hover:text-[#bb5f49] transition"
-        >
-          Remove
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              startEditing(index, item.text);
+            }}
+            className="rounded-full p-2 text-[#8C8791] hover:bg-[#F7F2E8] hover:text-[#5f5a63] transition"
+            title="Edit task"
+          >
+            <Pencil size={15} />
+          </button>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              removeChecklistItem(index);
+            }}
+            className="rounded-full p-2 text-[#D47D69] hover:bg-[#FFF1ED] hover:text-[#bb5f49] transition"
+            title="Remove task"
+          >
+            <Trash2 size={15} />
+          </button>
+        </div>
       </div>
     );
   };

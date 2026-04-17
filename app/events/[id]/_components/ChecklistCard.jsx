@@ -1,7 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Trash2 } from "lucide-react";
 import ChecklistModal from "./ChecklistModal";
+
+function truncateText(text, maxLength) {
+  if (!text) return "";
+  return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+}
 
 export default function ChecklistCard({
   checklist,
@@ -10,13 +16,14 @@ export default function ChecklistCard({
   addChecklistItem,
   removeChecklistItem,
   toggleChecklistItem,
+  updateChecklistItemText,
   saving,
   selectedTaskIndex,
   onSelectTask,
 }) {
   const [showChecklistModal, setShowChecklistModal] = useState(false);
 
-  const { visibleItems, hasCompletedInVisible } = useMemo(() => {
+  const { visibleItems } = useMemo(() => {
     const mapped = checklist.map((item, index) => ({
       ...item,
       originalIndex: index,
@@ -25,14 +32,8 @@ export default function ChecklistCard({
     const pendingTasks = mapped.filter((item) => !item.completed);
     const completedTasks = mapped.filter((item) => !!item.completed);
 
-    const combined = [...pendingTasks, ...completedTasks];
-    const firstSeven = combined.slice(0, 7);
-
-    const hasCompleted = firstSeven.some((item) => item.completed);
-
     return {
-      visibleItems: firstSeven,
-      hasCompletedInVisible: hasCompleted,
+      visibleItems: [...pendingTasks, ...completedTasks].slice(0, 7),
     };
   }, [checklist]);
 
@@ -125,7 +126,7 @@ export default function ChecklistCard({
                         <div className="min-w-0 flex-1">
                           <p
                             title={item.text}
-                            className={`font-medium line-clamp-2 break-words ${item.completed
+                            className={`truncate ${item.completed
                                 ? "text-[#8C8791] line-through"
                                 : "text-[#171717]"
                               }`}
@@ -133,26 +134,26 @@ export default function ChecklistCard({
                             {item.text}
                           </p>
 
-                          <p
-                            title={`${item.completed ? "Completed" : "Pending"}${item.note?.trim() ? " • Has note" : ""}`}
-                            className="text-sm text-[#8C8791] truncate"
-                          >
+                          <p className="text-sm text-[#8C8791] truncate">
                             {item.completed ? "Completed" : "Pending"}
                             {item.note?.trim() ? " • Has note" : ""}
                           </p>
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeChecklistItem(index);
-                        }}
-                        className="shrink-0 self-start text-sm text-[#D47D69] hover:text-[#bb5f49] transition"
-                      >
-                        Remove
-                      </button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeChecklistItem(index);
+                          }}
+                          className="rounded-full p-2 text-[#D47D69] hover:bg-[#FFF1ED] hover:text-[#bb5f49] transition"
+                          title="Remove task"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -168,6 +169,7 @@ export default function ChecklistCard({
         checklist={checklist}
         removeChecklistItem={removeChecklistItem}
         toggleChecklistItem={toggleChecklistItem}
+        updateChecklistItemText={updateChecklistItemText}
         selectedTaskIndex={selectedTaskIndex}
         onSelectTask={(index) => {
           setShowChecklistModal(false);

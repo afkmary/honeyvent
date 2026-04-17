@@ -38,15 +38,18 @@ export default function EventDetailsPage() {
     setSelectedTaskNoteInput,
     addGuest,
     removeGuest,
+    updateGuestName,
     addChecklistItem,
     removeChecklistItem,
     toggleChecklistItem,
+    updateChecklistItemText,
     addNote,
     removeNote,
+    updateNoteText,
     selectTask,
     closeTaskNoteModal,
-    saveSelectedTaskNote,
     clearSelectedTaskNote,
+    saveTaskDetails,
   } = useEventDetails({
     user,
     router,
@@ -98,6 +101,7 @@ export default function EventDetailsPage() {
                   setGuestInput={setGuestInput}
                   addGuest={addGuest}
                   removeGuest={removeGuest}
+                  updateGuestName={updateGuestName}
                   saving={savingSection === "guest"}
                   guestError={guestError}
                 />
@@ -109,6 +113,7 @@ export default function EventDetailsPage() {
                   addChecklistItem={addChecklistItem}
                   removeChecklistItem={removeChecklistItem}
                   toggleChecklistItem={toggleChecklistItem}
+                  updateChecklistItemText={updateChecklistItemText}
                   saving={savingSection === "checklist"}
                   selectedTaskIndex={selectedTaskIndex}
                   onSelectTask={selectTask}
@@ -120,6 +125,7 @@ export default function EventDetailsPage() {
                   setNotesInput={setNotesInput}
                   addNote={addNote}
                   removeNote={removeNote}
+                  updateNoteText={updateNoteText}
                   saving={savingSection === "note"}
                 />
               </div>
@@ -131,11 +137,12 @@ export default function EventDetailsPage() {
       <TaskNoteModal
         open={showTaskNoteModal}
         selectedTask={selectedTask}
+        selectedTaskIndex={selectedTaskIndex}
         selectedTaskNoteInput={selectedTaskNoteInput}
         setSelectedTaskNoteInput={setSelectedTaskNoteInput}
         closeTaskNoteModal={closeTaskNoteModal}
         clearSelectedTaskNote={clearSelectedTaskNote}
-        saveSelectedTaskNote={saveSelectedTaskNote}
+        saveTaskDetails={saveTaskDetails}
         isSaving={savingSection === "checklist"}
       />
     </>
