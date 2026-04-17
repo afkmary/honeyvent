@@ -10,7 +10,7 @@ export default function CreateNotesCard({
   removeNote,
 }) {
   return (
-    <div className="rounded-[28px] bg-white p-6 shadow-sm border border-[#F0E7D8] overflow-hidden h-[34rem] flex flex-col">
+    <div className="rounded-[28px] bg-white p-6 shadow-sm border border-[#F0E7D8] overflow-hidden h-136 flex flex-col">
       <label className="flex items-center justify-between text-lg font-semibold text-[#171717] mb-4 shrink-0">
         <span className="flex items-center gap-2">
           <StickyNote size={18} />
@@ -49,7 +49,7 @@ export default function CreateNotesCard({
               className="flex items-start justify-between gap-3 rounded-2xl bg-[#FFF8EF] border border-[#F3E6CB] px-4 py-3"
             >
               <div className="min-w-0 flex-1">
-                <p className="text-[#171717] break-words [overflow-wrap:anywhere]">
+                <p className="text-[#171717] wrap-break-word">
                   {note.text}
                 </p>
               </div>

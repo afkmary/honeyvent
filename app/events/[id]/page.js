@@ -349,7 +349,7 @@ export default function EventDetailsPage() {
 
               <div className="rounded-2xl bg-[#FFF8EF] border border-[#F3E6CB] px-4 py-3">
                 <p className="text-sm text-[#8C8791] mb-1">Task</p>
-                <p className="font-medium text-[#171717] break-words [overflow-wrap:anywhere]">
+                <p className="font-medium text-[#171717] wrap-break-word">
                   {selectedTask.text}
                 </p>
               </div>
