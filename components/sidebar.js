@@ -26,7 +26,7 @@ export default function Sidebar() {
     }
   }
 
-  const userName = user?.displayName || "Busy Bee";
+  const userName = user?.displayName || "";
   const userPhoto = user?.photoURL || "";
   const initialLetter = userName.charAt(0).toUpperCase();
 
