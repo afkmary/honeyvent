@@ -10,12 +10,50 @@ import {
 import {
   collection,
   getDocs,
-  orderBy,
-  query,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useUserAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/sidebar";
+
+function getEventDateValue(event) {
+  return event?.startDate || event?.date || "";
+}
+
+function getEventComparisonDateValue(event) {
+  return event?.endDate || event?.startDate || event?.date || "";
+}
+
+function getNormalizedDate(dateString) {
+  if (!dateString || typeof dateString !== "string") return null;
+
+  const parts = dateString.split("-");
+  if (parts.length !== 3) return null;
+
+  const [year, month, day] = parts.map(Number);
+  const date = new Date(year, month - 1, day);
+  date.setHours(0, 0, 0, 0);
+
+  return isNaN(date.getTime()) ? null : date;
+}
+
+function formatEventTime(event) {
+  if (event?.allDay) return "All Day";
+  if (event?.startTime) return event.startTime;
+  return "";
+}
+
+function formatEventDate(dateString) {
+  if (!dateString) return "No date set";
+
+  const date = getNormalizedDate(dateString);
+  if (!date) return "No date set";
+
+  return date.toLocaleDateString("en-CA", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+}
 
 export default function DashboardPage() {
   const { user } = useUserAuth();
@@ -33,13 +71,23 @@ export default function DashboardPage() {
     async function fetchEvents() {
       try {
         const eventsRef = collection(db, "users", user.uid, "events");
-        const q = query(eventsRef, orderBy("date", "asc"));
-        const snapshot = await getDocs(q);
+        const snapshot = await getDocs(eventsRef);
 
-        const fetchedEvents = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        const fetchedEvents = snapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          .sort((a, b) => {
+            const aDate = getNormalizedDate(getEventComparisonDateValue(a));
+            const bDate = getNormalizedDate(getEventComparisonDateValue(b));
+
+            if (!aDate && !bDate) return 0;
+            if (!aDate) return 1;
+            if (!bDate) return -1;
+
+            return aDate - bDate;
+          });
 
         setEvents(fetchedEvents);
       } catch (error) {
@@ -60,36 +108,81 @@ export default function DashboardPage() {
 
   const upcomingEvents = useMemo(() => {
     return events.filter((event) => {
-      if (!event.date) return false;
-
-      const eventDate = new Date(`${event.date}T00:00:00`);
-      eventDate.setHours(0, 0, 0, 0);
+      const eventDate = getNormalizedDate(getEventComparisonDateValue(event));
+      if (!eventDate) return false;
 
       return eventDate >= today;
     });
   }, [events, today]);
 
   const pastEvents = useMemo(() => {
-    return events.filter((event) => {
-      if (!event.date) return false;
+    return events
+      .filter((event) => {
+        const eventDate = getNormalizedDate(getEventComparisonDateValue(event));
+        if (!eventDate) return false;
 
-      const eventDate = new Date(`${event.date}T00:00:00`);
-      eventDate.setHours(0, 0, 0, 0);
+        return eventDate < today;
+      })
+      .sort((a, b) => {
+        const aDate = getNormalizedDate(getEventComparisonDateValue(a));
+        const bDate = getNormalizedDate(getEventComparisonDateValue(b));
 
-      return eventDate < today;
-    });
+        if (!aDate && !bDate) return 0;
+        if (!aDate) return 1;
+        if (!bDate) return -1;
+
+        return bDate - aDate;
+      });
   }, [events, today]);
 
   const nextEvent = upcomingEvents.length > 0 ? upcomingEvents[0] : null;
   const upcomingWithoutNext = upcomingEvents.slice(1);
 
+  const visibleUpcomingPreview = upcomingWithoutNext.slice(0, 2);
+  const visiblePastPreview = pastEvents.slice(0, 2);
+
   const pendingTasksCount = useMemo(() => {
     return events.reduce((total, event) => {
+      const eventDate = getNormalizedDate(getEventComparisonDateValue(event));
+      if (!eventDate || eventDate < today) return total;
+
       const checklist = Array.isArray(event.checklist) ? event.checklist : [];
       const pending = checklist.filter((item) => !item.completed).length;
+
       return total + pending;
     }, 0);
-  }, [events]);
+  }, [events, today]);
+
+  const upcomingTasks = useMemo(() => {
+    const tasks = [];
+
+    upcomingEvents.forEach((event) => {
+      const checklist = Array.isArray(event.checklist)
+        ? event.checklist
+        : [];
+
+      checklist.forEach((item) => {
+        if (!item.completed) {
+          tasks.push({
+            text: item.text,
+            eventName: event.eventName,
+            eventId: event.id,
+            eventDate: getNormalizedDate(getEventComparisonDateValue(event)),
+          });
+        }
+      });
+    });
+
+    // sort by closest event date
+    tasks.sort((a, b) => {
+      if (!a.eventDate && !b.eventDate) return 0;
+      if (!a.eventDate) return 1;
+      if (!b.eventDate) return -1;
+      return a.eventDate - b.eventDate;
+    });
+
+    return tasks.slice(0, 3);
+  }, [upcomingEvents]);
 
   const stats = [
     {
@@ -108,17 +201,6 @@ export default function DashboardPage() {
       icon: <CheckSquare size={18} />,
     },
   ];
-
-  function formatEventDate(dateString) {
-    if (!dateString) return "No date set";
-
-    const date = new Date(`${dateString}T00:00:00`);
-    return date.toLocaleDateString("en-CA", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-    });
-  }
 
   const firstName =
     user?.displayName?.trim()?.split(" ")[0] || "there";
@@ -161,13 +243,12 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-
-          {/* LEFT COLUMN - NEXT EVENT */}
-          <div className="xl:col-span-2 self-start">
-            <div className="rounded-[28px] bg-white p-6 shadow-sm border border-[#F0E7D8]">
+          <div className="xl:col-span-2 flex flex-col gap-6">
+            <div className="rounded-[28px] bg-white p-6 shadow-sm border border-[#F0E7D8] flex-1 flex flex-col">
               <h3 className="text-xl font-semibold text-[#171717] mb-2">
                 Your next event
               </h3>
+
               {loadingEvents ? (
                 <div className="rounded-3xl bg-[#FFF8EF] border border-[#F3E6CB] p-5">
                   <p className="text-[#6B7280]">Loading events...</p>
@@ -176,8 +257,10 @@ export default function DashboardPage() {
                 <div className="rounded-3xl bg-[#FFF8EF] border border-[#F3E6CB] p-5 flex flex-col">
                   <div>
                     <p className="text-sm text-[#C98C00] font-medium mb-2">
-                      {formatEventDate(nextEvent.date)}
-                      {nextEvent.startTime ? ` • ${nextEvent.startTime}` : ""}
+                      {formatEventDate(getEventDateValue(nextEvent))}
+                      {formatEventTime(nextEvent)
+                        ? ` • ${formatEventTime(nextEvent)}`
+                        : ""}
                     </p>
 
                     <h4 className="text-2xl font-semibold text-[#171717] mb-2">
@@ -229,12 +312,51 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
+
+            <div className="rounded-[28px] bg-white p-6 shadow-sm border border-[#F0E7D8] flex-1 flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold text-[#171717]">
+                  Upcoming Tasks
+                </h3>
+
+                <span className="text-xs bg-[#FFF3D6] text-[#C98C00] px-3 py-1 rounded-full">
+                  {pendingTasksCount}
+                </span>
+              </div>
+
+              {upcomingTasks.length === 0 ? (
+                <p className="text-[#8C8791]">No pending tasks 🎉</p>
+              ) : (
+                <div className="space-y-3 flex-1">
+                  {upcomingTasks.map((task, index) => (
+                    <div
+                      key={index}
+                      className="rounded-2xl bg-[#FFF8EF] border border-[#F3E6CB] px-4 py-3 flex justify-between items-center gap-3"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[#171717] font-medium truncate">
+                          {task.text}
+                        </p>
+
+                        <p className="text-sm text-[#8C8791] truncate">
+                          {task.eventName || "Untitled Event"}
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() => router.push(`/events/${task.eventId}`)}
+                        className="text-sm font-semibold text-[#C98C00] hover:underline shrink-0"
+                      >
+                        View
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* RIGHT COLUMN */}
           <div className="flex flex-col gap-6">
-
-            {/* UPCOMING EVENTS */}
             <div className="rounded-[28px] bg-white p-6 shadow-sm border border-[#F0E7D8] flex flex-col">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-semibold text-[#171717]">
@@ -249,26 +371,32 @@ export default function DashboardPage() {
               {upcomingWithoutNext.length === 0 ? (
                 <p className="text-[#8C8791] flex-1">No upcoming events.</p>
               ) : (
-                <div className="max-h-70 overflow-y-auto pr-2 space-y-3 flex-1">
-                  {upcomingWithoutNext.map((event) => (
+                <div className="space-y-3 flex-1">
+                  {visibleUpcomingPreview.map((event) => (
                     <div
                       key={event.id}
-                      className="rounded-2xl bg-[#FFF8EF] border border-[#F3E6CB] p-4 flex justify-between items-center"
+                      className="h-27 rounded-2xl bg-[#FFF8EF] border border-[#F3E6CB] px-4 py-3 flex justify-between items-center gap-4 overflow-hidden"
                     >
-                      <div className="min-w-0">
-                        <p className="text-sm text-[#C98C00] font-medium">
-                          {formatEventDate(event.date)}
-                          {event.startTime ? ` • ${event.startTime}` : ""}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-[#C98C00] font-medium truncate">
+                          {formatEventDate(getEventDateValue(event))}
+                          {formatEventTime(event)
+                            ? ` • ${formatEventTime(event)}`
+                            : ""}
                         </p>
 
-                        <h4 className="text-lg font-semibold text-[#171717] truncate">
+                        <h4 className="text-lg font-semibold text-[#171717] truncate mt-1">
                           {event.eventName || "Untitled Event"}
                         </h4>
+
+                        <p className="text-sm text-[#6B7280] truncate mt-1">
+                          {event.theme || "No theme"}
+                        </p>
                       </div>
 
                       <button
                         onClick={() => router.push(`/events/${event.id}`)}
-                        className="ml-4 text-sm font-semibold text-[#C98C00] hover:underline shrink-0"
+                        className="ml-2 text-sm font-semibold text-[#C98C00] hover:underline shrink-0"
                       >
                         View
                       </button>
@@ -277,7 +405,7 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {upcomingWithoutNext.length > 0 && (
+              {upcomingWithoutNext.length > 2 && (
                 <div className="flex justify-end pt-4">
                   <button
                     onClick={() => router.push("/events/upcoming")}
@@ -289,7 +417,6 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* PAST EVENTS */}
             <div className="rounded-[28px] bg-white p-6 shadow-sm border border-[#F0E7D8] flex flex-col">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-semibold text-[#171717]">
@@ -304,26 +431,32 @@ export default function DashboardPage() {
               {pastEvents.length === 0 ? (
                 <p className="text-[#8C8791] flex-1">No past events.</p>
               ) : (
-                <div className="max-h-70 overflow-y-auto pr-2 space-y-3 flex-1">
-                  {pastEvents.map((event) => (
+                <div className="space-y-3 flex-1">
+                  {visiblePastPreview.map((event) => (
                     <div
                       key={event.id}
-                      className="rounded-2xl bg-[#F9F5EC] border border-[#EADFCB] p-4 flex justify-between items-center opacity-85"
+                      className="h-27 rounded-2xl bg-[#F9F5EC] border border-[#EADFCB] px-4 py-3 flex justify-between items-center gap-4 overflow-hidden opacity-85"
                     >
-                      <div className="min-w-0">
-                        <p className="text-sm text-[#A89F91]">
-                          {formatEventDate(event.date)}
-                          {event.startTime ? ` • ${event.startTime}` : ""}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-[#A89F91] truncate">
+                          {formatEventDate(getEventDateValue(event))}
+                          {formatEventTime(event)
+                            ? ` • ${formatEventTime(event)}`
+                            : ""}
                         </p>
 
-                        <h4 className="text-lg font-semibold text-[#5C5C5C] truncate">
+                        <h4 className="text-lg font-semibold text-[#5C5C5C] truncate mt-1">
                           {event.eventName || "Untitled Event"}
                         </h4>
+
+                        <p className="text-sm text-[#8C8791] truncate mt-1">
+                          {event.theme || "No theme"}
+                        </p>
                       </div>
 
                       <button
                         onClick={() => router.push(`/events/${event.id}`)}
-                        className="ml-4 text-sm font-semibold text-[#A89F91] hover:underline shrink-0"
+                        className="ml-2 text-sm font-semibold text-[#A89F91] hover:underline shrink-0"
                       >
                         View
                       </button>
@@ -332,7 +465,7 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {pastEvents.length > 0 && (
+              {pastEvents.length > 2 && (
                 <div className="flex justify-end pt-4">
                   <button
                     onClick={() => router.push("/events/past")}

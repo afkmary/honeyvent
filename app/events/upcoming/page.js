@@ -7,13 +7,95 @@ import {
   deleteDoc,
   doc,
   getDocs,
-  orderBy,
-  query,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useUserAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/sidebar";
 import ConfirmationModal from "@/components/ConfirmationModal";
+
+function parseLocalDate(dateString) {
+  if (!dateString || typeof dateString !== "string") return null;
+
+  const parts = dateString.split("-");
+  if (parts.length !== 3) return null;
+
+  const [year, month, day] = parts.map(Number);
+  const date = new Date(year, month - 1, day);
+  date.setHours(0, 0, 0, 0);
+
+  return isNaN(date.getTime()) ? null : date;
+}
+
+function getEventDisplayDate(event) {
+  return event?.startDate || event?.date || "";
+}
+
+function getEventUpcomingComparisonDate(event) {
+  return event?.endDate || event?.startDate || event?.date || "";
+}
+
+function formatEventDate(dateString) {
+  const date = parseLocalDate(dateString);
+  if (!date) return "No date set";
+
+  return date.toLocaleDateString("en-CA", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function PageState({ children, centered = false }) {
+  return (
+    <div
+      className={`rounded-3xl border border-[#F0E7D8] bg-white p-8 ${centered ? "text-center" : ""
+        }`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function UpcomingEventCard({ event, onView, onDelete }) {
+  const displayDate = getEventDisplayDate(event);
+
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-2xl border border-[#F0E7D8] bg-white p-5">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-[#C98C00]">
+          {formatEventDate(displayDate)}
+          {event.startTime ? ` • ${event.startTime}` : ""}
+        </p>
+
+        <h2 className="truncate text-xl font-semibold text-[#171717]">
+          {event.eventName || "Untitled Event"}
+        </h2>
+
+        <p className="truncate text-sm text-[#6B7280]">
+          {event.theme || "No theme"}
+        </p>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-3">
+        <button
+          type="button"
+          onClick={onView}
+          className="rounded-full bg-[#E3C56A] px-5 py-3 text-sm font-semibold text-[#5A4A1F] transition hover:bg-[#d9b954]"
+        >
+          View
+        </button>
+
+        <button
+          type="button"
+          onClick={onDelete}
+          className="rounded-full bg-[#F9E1DC] px-5 py-3 text-sm font-semibold text-[#B85C47] transition hover:bg-[#f3d1ca]"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function UpcomingEventsPage() {
   const { user } = useUserAuth();
@@ -21,7 +103,6 @@ export default function UpcomingEventsPage() {
 
   const [events, setEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
-
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -32,17 +113,18 @@ export default function UpcomingEventsPage() {
     }
 
     async function fetchEvents() {
+      setLoadingEvents(true);
+
       try {
         const eventsRef = collection(db, "users", user.uid, "events");
-        const q = query(eventsRef, orderBy("date", "asc"));
-        const snapshot = await getDocs(q);
+        const snapshot = await getDocs(eventsRef);
 
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
+        const fetchedEvents = snapshot.docs.map((docSnapshot) => ({
+          id: docSnapshot.id,
+          ...docSnapshot.data(),
         }));
 
-        setEvents(data);
+        setEvents(fetchedEvents);
       } catch (error) {
         console.error("Error fetching upcoming events:", error);
       } finally {
@@ -53,42 +135,43 @@ export default function UpcomingEventsPage() {
     fetchEvents();
   }, [user, router]);
 
-  const today = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, []);
-
   const upcomingEvents = useMemo(() => {
-    return events.filter((event) => {
-      if (!event.date) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-      const eventDate = new Date(`${event.date}T00:00:00`);
-      eventDate.setHours(0, 0, 0, 0);
+    return events
+      .filter((event) => {
+        const comparisonDate = getEventUpcomingComparisonDate(event);
+        const eventDate = parseLocalDate(comparisonDate);
 
-      return eventDate >= today;
-    });
-  }, [events, today]);
+        if (!eventDate) return false;
 
-  function formatEventDate(dateString) {
-    if (!dateString) return "No date set";
+        return eventDate >= today;
+      })
+      .sort((a, b) => {
+        const dateA = parseLocalDate(getEventUpcomingComparisonDate(a));
+        const dateB = parseLocalDate(getEventUpcomingComparisonDate(b));
 
-    const date = new Date(`${dateString}T00:00:00`);
-    return date.toLocaleDateString("en-CA", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-    });
-  }
+        if (!dateA && !dateB) return 0;
+        if (!dateA) return 1;
+        if (!dateB) return -1;
 
-  async function confirmDelete() {
+        return dateA - dateB;
+      });
+  }, [events]);
+
+  async function handleDeleteConfirm() {
     if (!user || !selectedEvent) return;
 
     setDeleting(true);
 
     try {
       await deleteDoc(doc(db, "users", user.uid, "events", selectedEvent.id));
-      setEvents((prev) => prev.filter((event) => event.id !== selectedEvent.id));
+
+      setEvents((prevEvents) =>
+        prevEvents.filter((event) => event.id !== selectedEvent.id)
+      );
+
       setSelectedEvent(null);
     } catch (error) {
       console.error("Error deleting event:", error);
@@ -101,64 +184,35 @@ export default function UpcomingEventsPage() {
 
   return (
     <>
-      <main className="min-h-screen bg-[#FFF8EF] flex">
+      <main className="flex min-h-screen bg-[#FFF8EF]">
         <Sidebar />
 
         <section className="flex-1 p-8">
           <div className="max-w-5xl">
-            <h1 className="text-3xl font-semibold text-[#171717] mb-2">
+            <h1 className="mb-2 text-3xl font-semibold text-[#171717]">
               Upcoming Events
             </h1>
-            <p className="text-[#6B7280] mb-8">
+            <p className="mb-8 text-[#6B7280]">
               All your upcoming plans in one place.
             </p>
 
             {loadingEvents ? (
-              <div className="rounded-3xl bg-white p-8 border border-[#F0E7D8]">
+              <PageState>
                 <p className="text-[#6B7280]">Loading...</p>
-              </div>
+              </PageState>
             ) : upcomingEvents.length === 0 ? (
-              <div className="rounded-3xl bg-white p-8 text-center border border-[#F0E7D8]">
+              <PageState centered>
                 <p className="text-[#8C8791]">No upcoming events yet.</p>
-              </div>
+              </PageState>
             ) : (
               <div className="space-y-4">
                 {upcomingEvents.map((event) => (
-                  <div
+                  <UpcomingEventCard
                     key={event.id}
-                    className="rounded-2xl bg-white border border-[#F0E7D8] p-5 flex justify-between items-center gap-4"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm text-[#C98C00] font-medium">
-                        {formatEventDate(event.date)}
-                        {event.startTime ? ` • ${event.startTime}` : ""}
-                      </p>
-
-                      <h2 className="text-xl font-semibold text-[#171717] truncate">
-                        {event.eventName || "Untitled Event"}
-                      </h2>
-
-                      <p className="text-[#6B7280] text-sm truncate">
-                        {event.theme || "No theme"}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-3 shrink-0">
-                      <button
-                        onClick={() => router.push(`/events/${event.id}`)}
-                        className="rounded-full bg-[#E3C56A] px-5 py-3 text-sm font-semibold text-[#5A4A1F] hover:bg-[#d9b954] transition"
-                      >
-                        View
-                      </button>
-
-                      <button
-                        onClick={() => setSelectedEvent(event)}
-                        className="rounded-full bg-[#F9E1DC] px-5 py-3 text-sm font-semibold text-[#B85C47] hover:bg-[#f3d1ca] transition"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
+                    event={event}
+                    onView={() => router.push(`/events/${event.id}`)}
+                    onDelete={() => setSelectedEvent(event)}
+                  />
                 ))}
               </div>
             )}
@@ -166,16 +220,16 @@ export default function UpcomingEventsPage() {
         </section>
       </main>
 
-      {/* DELETE CONFIRMATION MODAL */}
       <ConfirmationModal
         isOpen={!!selectedEvent}
         title="Delete event?"
-        description={`Are you sure you want to delete "${selectedEvent?.eventName || "this event"}"? This action cannot be undone.`}
+        description={`Are you sure you want to delete "${selectedEvent?.eventName || "this event"
+          }"? This action cannot be undone.`}
         confirmText="Delete"
         onClose={() => {
           if (!deleting) setSelectedEvent(null);
         }}
-        onConfirm={confirmDelete}
+        onConfirm={handleDeleteConfirm}
         loading={deleting}
         confirmButtonClassName="bg-[#F9E1DC] text-[#B85C47] hover:bg-[#f3d1ca]"
       />

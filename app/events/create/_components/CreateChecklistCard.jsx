@@ -10,8 +10,8 @@ export default function CreateChecklistCard({
   removeChecklistItem,
 }) {
   return (
-    <div className="rounded-[28px] bg-white p-6 shadow-sm border border-[#F0E7D8] overflow-hidden">
-      <label className="flex items-center justify-between text-lg font-semibold text-[#171717] mb-4">
+    <div className="rounded-[28px] bg-white p-6 shadow-sm border border-[#F0E7D8] overflow-hidden h-[34rem] flex flex-col">
+      <label className="flex items-center justify-between text-lg font-semibold text-[#171717] mb-4 shrink-0">
         <span className="flex items-center gap-2">
           <CheckSquare size={18} />
           Checklist
@@ -22,7 +22,7 @@ export default function CreateChecklistCard({
         </span>
       </label>
 
-      <div className="flex items-center gap-2 mb-4 w-full max-w-80 mx-auto">
+      <div className="shrink-0 flex items-center gap-2 mb-4 w-full max-w-80 mx-auto">
         <input
           type="text"
           value={checklistInput}
@@ -39,20 +39,25 @@ export default function CreateChecklistCard({
         </button>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2 flex-1 overflow-y-auto pr-1 min-h-0">
         {checklist.length === 0 ? (
           <p className="text-sm text-[#8C8791]">No tasks added yet.</p>
         ) : (
           checklist.map((item, index) => (
             <div
               key={`${item.text}-${index}`}
-              className="flex items-center justify-between rounded-2xl bg-[#FFF8EF] border border-[#F3E6CB] px-4 py-3"
+              className="flex items-start justify-between gap-3 rounded-2xl bg-[#FFF8EF] border border-[#F3E6CB] px-4 py-3"
             >
-              <span className="text-[#171717]">{item.text}</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[#171717] break-words [overflow-wrap:anywhere]">
+                  {item.text}
+                </p>
+              </div>
+
               <button
                 type="button"
                 onClick={() => removeChecklistItem(index)}
-                className="text-sm text-[#D47D69] hover:text-[#bb5f49] transition"
+                className="shrink-0 self-start text-sm text-[#D47D69] hover:text-[#bb5f49] transition"
               >
                 Remove
               </button>

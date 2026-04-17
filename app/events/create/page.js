@@ -29,6 +29,7 @@ export default function CreateEventPage() {
   const [endHour, setEndHour] = useState("12");
   const [endMinute, setEndMinute] = useState("00");
   const [endPeriod, setEndPeriod] = useState("AM");
+  const [allDay, setAllDay] = useState(false);
 
   const [guestInput, setGuestInput] = useState("");
   const [checklistInput, setChecklistInput] = useState("");
@@ -37,6 +38,8 @@ export default function CreateEventPage() {
   const [guestList, setGuestList] = useState([]);
   const [checklist, setChecklist] = useState([]);
   const [notes, setNotes] = useState([]);
+
+  const [guestError, setGuestError] = useState("");
 
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
@@ -58,6 +61,17 @@ export default function CreateEventPage() {
     const trimmed = guestInput.trim();
     if (!trimmed) return;
 
+    const normalizedInput = trimmed.toLowerCase();
+
+    const alreadyExists = guestList.some(
+      (guest) => guest.name?.trim().toLowerCase() === normalizedInput
+    );
+
+    if (alreadyExists) {
+      setGuestError("That guest is already on the list.");
+      return;
+    }
+
     setGuestList((prev) => [
       ...prev,
       {
@@ -65,7 +79,9 @@ export default function CreateEventPage() {
         status: "invited",
       },
     ]);
+
     setGuestInput("");
+    setGuestError("");
   }
 
   function addChecklistItem() {
@@ -97,6 +113,7 @@ export default function CreateEventPage() {
 
   function removeGuest(index) {
     setGuestList((prev) => prev.filter((_, i) => i !== index));
+    setGuestError("");
   }
 
   function removeChecklistItem(index) {
@@ -132,9 +149,15 @@ export default function CreateEventPage() {
         coverImage = await getDownloadURL(imageRef);
       }
 
-      const startTime = `${startHour}:${startMinute} ${startPeriod}`;
-      const endTime = `${endHour}:${endMinute} ${endPeriod}`;
       const finalEndDate = endDate || startDate;
+
+      const startTime = allDay
+        ? ""
+        : `${startHour}:${startMinute} ${startPeriod}`;
+
+      const endTime = allDay
+        ? ""
+        : `${endHour}:${endMinute} ${endPeriod}`;
 
       const eventsRef = collection(db, "users", user.uid, "events");
 
@@ -145,6 +168,7 @@ export default function CreateEventPage() {
         endDate: finalEndDate,
         startTime,
         endTime,
+        allDay,
         coverImage,
         guestList,
         checklist,
@@ -201,6 +225,8 @@ export default function CreateEventPage() {
               imagePreview={imagePreview}
               setImagePreview={setImagePreview}
               setError={setError}
+              allDay={allDay}
+              setAllDay={setAllDay}
             />
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -210,6 +236,7 @@ export default function CreateEventPage() {
                 setGuestInput={setGuestInput}
                 addGuest={addGuest}
                 removeGuest={removeGuest}
+                guestError={guestError}
               />
 
               <CreateChecklistCard

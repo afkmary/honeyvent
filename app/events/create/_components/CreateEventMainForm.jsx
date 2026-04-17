@@ -40,6 +40,8 @@ export default function CreateEventMainForm({
   setEndMinute,
   endPeriod,
   setEndPeriod,
+  allDay,
+  setAllDay,
   imageFile,
   setImageFile,
   imagePreview,
@@ -66,6 +68,17 @@ export default function CreateEventMainForm({
     setError("");
   }
 
+  function handleStartDateChange(value) {
+    setStartDate(value);
+
+    if (!endDate) {
+      setEndDate(value);
+    }
+  }
+
+  function handleEndDateChange(value) {
+    setEndDate(value);
+  }
   return (
     <>
       <div className="rounded-[28px] bg-white p-6 shadow-sm border border-[#F0E7D8]">
@@ -120,7 +133,7 @@ export default function CreateEventMainForm({
             <input
               type="date"
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              onChange={(e) => handleStartDateChange(e.target.value)}
               className="w-full rounded-2xl border border-[#E8DCC8] bg-white px-4 py-3 text-[#171717] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
               required
             />
@@ -134,100 +147,123 @@ export default function CreateEventMainForm({
             <input
               type="date"
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              onChange={(e) => handleEndDateChange(e.target.value)}
               className="w-full rounded-2xl border border-[#E8DCC8] bg-white px-4 py-3 text-[#171717] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
             />
           </div>
 
-          <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-[#171717] mb-2">
-              <Clock3 size={16} />
-              Start Time
+          <div className="md:col-span-2">
+            <label className="flex items-center gap-3 text-sm font-medium text-[#171717]">
+              <input
+                type="checkbox"
+                checked={allDay}
+                onChange={(e) => setAllDay(e.target.checked)}
+                className="h-4 w-4 rounded border border-[#E8DCC8] accent-[#F4B942]"
+              />
+              All Day
             </label>
-
-            <div className="grid grid-cols-3 gap-2">
-              <select
-                value={startHour}
-                onChange={(e) => setStartHour(e.target.value)}
-                className="rounded-2xl border border-[#E8DCC8] bg-white px-3 py-3 text-[#171717] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
-              >
-                {hours.map((hour) => (
-                  <option key={hour} value={hour}>
-                    {hour}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={startMinute}
-                onChange={(e) => setStartMinute(e.target.value)}
-                className="rounded-2xl border border-[#E8DCC8] bg-white px-3 py-3 text-[#171717] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
-              >
-                {minutes.map((minute) => (
-                  <option key={minute} value={minute}>
-                    {minute}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={startPeriod}
-                onChange={(e) => setStartPeriod(e.target.value)}
-                className="rounded-2xl border border-[#E8DCC8] bg-white px-3 py-3 text-[#171717] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
-              >
-                {periods.map((period) => (
-                  <option key={period} value={period}>
-                    {period}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <p className="mt-2 text-sm text-[#8C8791]">
+              If checked, time fields will be skipped.
+            </p>
           </div>
 
-          <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-[#171717] mb-2">
-              <Clock3 size={16} />
-              End Time
-            </label>
+          {!allDay ? (
+            <>
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-[#171717] mb-2">
+                  <Clock3 size={16} />
+                  Start Time
+                </label>
 
-            <div className="grid grid-cols-3 gap-2">
-              <select
-                value={endHour}
-                onChange={(e) => setEndHour(e.target.value)}
-                className="rounded-2xl border border-[#E8DCC8] bg-white px-3 py-3 text-[#171717] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
-              >
-                {hours.map((hour) => (
-                  <option key={hour} value={hour}>
-                    {hour}
-                  </option>
-                ))}
-              </select>
+                <div className="grid grid-cols-3 gap-2">
+                  <select
+                    value={startHour}
+                    onChange={(e) => setStartHour(e.target.value)}
+                    className="rounded-2xl border border-[#E8DCC8] bg-white px-3 py-3 text-[#171717] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
+                  >
+                    {hours.map((hour) => (
+                      <option key={hour} value={hour}>
+                        {hour}
+                      </option>
+                    ))}
+                  </select>
 
-              <select
-                value={endMinute}
-                onChange={(e) => setEndMinute(e.target.value)}
-                className="rounded-2xl border border-[#E8DCC8] bg-white px-3 py-3 text-[#171717] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
-              >
-                {minutes.map((minute) => (
-                  <option key={minute} value={minute}>
-                    {minute}
-                  </option>
-                ))}
-              </select>
+                  <select
+                    value={startMinute}
+                    onChange={(e) => setStartMinute(e.target.value)}
+                    className="rounded-2xl border border-[#E8DCC8] bg-white px-3 py-3 text-[#171717] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
+                  >
+                    {minutes.map((minute) => (
+                      <option key={minute} value={minute}>
+                        {minute}
+                      </option>
+                    ))}
+                  </select>
 
-              <select
-                value={endPeriod}
-                onChange={(e) => setEndPeriod(e.target.value)}
-                className="rounded-2xl border border-[#E8DCC8] bg-white px-3 py-3 text-[#171717] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
-              >
-                {periods.map((period) => (
-                  <option key={period} value={period}>
-                    {period}
-                  </option>
-                ))}
-              </select>
+                  <select
+                    value={startPeriod}
+                    onChange={(e) => setStartPeriod(e.target.value)}
+                    className="rounded-2xl border border-[#E8DCC8] bg-white px-3 py-3 text-[#171717] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
+                  >
+                    {periods.map((period) => (
+                      <option key={period} value={period}>
+                        {period}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-[#171717] mb-2">
+                  <Clock3 size={16} />
+                  End Time
+                </label>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <select
+                    value={endHour}
+                    onChange={(e) => setEndHour(e.target.value)}
+                    className="rounded-2xl border border-[#E8DCC8] bg-white px-3 py-3 text-[#171717] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
+                  >
+                    {hours.map((hour) => (
+                      <option key={hour} value={hour}>
+                        {hour}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={endMinute}
+                    onChange={(e) => setEndMinute(e.target.value)}
+                    className="rounded-2xl border border-[#E8DCC8] bg-white px-3 py-3 text-[#171717] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
+                  >
+                    {minutes.map((minute) => (
+                      <option key={minute} value={minute}>
+                        {minute}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={endPeriod}
+                    onChange={(e) => setEndPeriod(e.target.value)}
+                    className="rounded-2xl border border-[#E8DCC8] bg-white px-3 py-3 text-[#171717] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
+                  >
+                    {periods.map((period) => (
+                      <option key={period} value={period}>
+                        {period}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="md:col-span-2 rounded-2xl border border-[#F3E6CB] bg-[#FFF8EF] px-4 py-3 text-sm text-[#8C8791]">
+              This event will be saved as an all-day event.
             </div>
-          </div>
+          )}
         </div>
       </div>
 

@@ -38,6 +38,7 @@ function getEventFormValues(eventData) {
     endHour: endParts.hour,
     endMinute: endParts.minute,
     endPeriod: endParts.period,
+    allDay: Boolean(eventData?.allDay),
   };
 }
 
@@ -54,6 +55,7 @@ export default function EventHeaderCard({ user, eventId, eventData, setEventData
   const [endHour, setEndHour] = useState("12");
   const [endMinute, setEndMinute] = useState("00");
   const [endPeriod, setEndPeriod] = useState("AM");
+  const [allDayInput, setAllDayInput] = useState(false);
 
   const [savingEvent, setSavingEvent] = useState(false);
   const [bannerUploading, setBannerUploading] = useState(false);
@@ -72,6 +74,7 @@ export default function EventHeaderCard({ user, eventId, eventData, setEventData
     setEndHour(values.endHour);
     setEndMinute(values.endMinute);
     setEndPeriod(values.endPeriod);
+    setAllDayInput(values.allDay);
   }
 
   useEffect(() => {
@@ -105,13 +108,20 @@ export default function EventHeaderCard({ user, eventId, eventData, setEventData
     setHeaderError("");
 
     try {
+      const finalEndDate = endDateInput || startDateInput;
+
       const updatedFields = {
         eventName: trimmedEventName,
         theme: trimmedTheme,
         startDate: startDateInput,
-        endDate: endDateInput || startDateInput,
-        startTime: `${startHour}:${startMinute} ${startPeriod}`,
-        endTime: `${endHour}:${endMinute} ${endPeriod}`,
+        endDate: finalEndDate,
+        allDay: allDayInput,
+        startTime: allDayInput
+          ? ""
+          : `${startHour}:${startMinute} ${startPeriod}`,
+        endTime: allDayInput
+          ? ""
+          : `${endHour}:${endMinute} ${endPeriod}`,
       };
 
       const eventRef = doc(db, "users", user.uid, "events", eventId);
@@ -209,6 +219,8 @@ export default function EventHeaderCard({ user, eventId, eventData, setEventData
             setEndMinute={setEndMinute}
             endPeriod={endPeriod}
             setEndPeriod={setEndPeriod}
+            allDayInput={allDayInput}
+            setAllDayInput={setAllDayInput}
             headerError={headerError}
             cancelEditEvent={cancelEditEvent}
             saveEventDetails={saveEventDetails}

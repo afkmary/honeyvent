@@ -2,18 +2,95 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  orderBy,
-  query,
-} from "firebase/firestore";
+import { collection, deleteDoc, doc, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useUserAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/sidebar";
 import ConfirmationModal from "@/components/ConfirmationModal";
+
+function parseLocalDate(dateString) {
+  if (!dateString || typeof dateString !== "string") return null;
+
+  const parts = dateString.split("-");
+  if (parts.length !== 3) return null;
+
+  const [year, month, day] = parts.map(Number);
+  const date = new Date(year, month - 1, day);
+  date.setHours(0, 0, 0, 0);
+
+  return isNaN(date.getTime()) ? null : date;
+}
+
+function getEventDisplayDate(event) {
+  return event?.startDate || event?.date || "";
+}
+
+function getEventPastComparisonDate(event) {
+  return event?.endDate || event?.startDate || event?.date || "";
+}
+
+function formatEventDate(dateString) {
+  const date = parseLocalDate(dateString);
+  if (!date) return "No date set";
+
+  return date.toLocaleDateString("en-CA", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function PageState({ children, centered = false }) {
+  return (
+    <div
+      className={`rounded-3xl border border-[#F0E7D8] bg-white p-8 ${centered ? "text-center" : ""
+        }`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function PastEventCard({ event, onView, onDelete }) {
+  const displayDate = getEventDisplayDate(event);
+
+  return (
+    <div className="h-[9.5rem] rounded-2xl border border-[#F0E7D8] bg-white p-5 flex items-center justify-between gap-4 overflow-hidden opacity-80">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-[#8C8791] truncate">
+          {formatEventDate(displayDate)}
+          {event.startTime ? ` • ${event.startTime}` : ""}
+        </p>
+
+        <h2 className="truncate text-xl font-semibold text-[#5C5C5C] mt-1">
+          {event.eventName || "Untitled Event"}
+        </h2>
+
+        <p className="truncate text-sm text-[#8C8791] mt-1">
+          {event.theme || "No theme"}
+        </p>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-3">
+        <button
+          type="button"
+          onClick={onView}
+          className="rounded-full bg-[#E9E2D4] px-5 py-3 text-sm font-semibold text-[#6F675D] transition hover:bg-[#ddd3c1]"
+        >
+          View
+        </button>
+
+        <button
+          type="button"
+          onClick={onDelete}
+          className="rounded-full bg-[#F9E1DC] px-5 py-3 text-sm font-semibold text-[#B85C47] transition hover:bg-[#f3d1ca]"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function PastEventsPage() {
   const { user } = useUserAuth();
@@ -21,9 +98,9 @@ export default function PastEventsPage() {
 
   const [events, setEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
-
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -32,17 +109,18 @@ export default function PastEventsPage() {
     }
 
     async function fetchEvents() {
+      setLoadingEvents(true);
+
       try {
         const eventsRef = collection(db, "users", user.uid, "events");
-        const q = query(eventsRef, orderBy("date", "desc"));
-        const snapshot = await getDocs(q);
+        const snapshot = await getDocs(eventsRef);
 
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
+        const fetchedEvents = snapshot.docs.map((docSnapshot) => ({
+          id: docSnapshot.id,
+          ...docSnapshot.data(),
         }));
 
-        setEvents(data);
+        setEvents(fetchedEvents);
       } catch (error) {
         console.error("Error fetching past events:", error);
       } finally {
@@ -53,42 +131,45 @@ export default function PastEventsPage() {
     fetchEvents();
   }, [user, router]);
 
-  const today = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, []);
-
   const pastEvents = useMemo(() => {
-    return events.filter((event) => {
-      if (!event.date) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-      const eventDate = new Date(`${event.date}T00:00:00`);
-      eventDate.setHours(0, 0, 0, 0);
+    return events
+      .filter((event) => {
+        const comparisonDate = getEventPastComparisonDate(event);
+        const eventDate = parseLocalDate(comparisonDate);
 
-      return eventDate < today;
-    });
-  }, [events, today]);
+        if (!eventDate) return false;
 
-  function formatEventDate(dateString) {
-    if (!dateString) return "No date set";
+        return eventDate < today;
+      })
+      .sort((a, b) => {
+        const dateA = parseLocalDate(getEventPastComparisonDate(a));
+        const dateB = parseLocalDate(getEventPastComparisonDate(b));
 
-    const date = new Date(`${dateString}T00:00:00`);
-    return date.toLocaleDateString("en-CA", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-    });
-  }
+        if (!dateA && !dateB) return 0;
+        if (!dateA) return 1;
+        if (!dateB) return -1;
 
-  async function confirmDelete() {
+        return dateB - dateA;
+      });
+  }, [events]);
+
+  const visiblePastEvents = showAll ? pastEvents : pastEvents.slice(0, 2);
+
+  async function handleDeleteConfirm() {
     if (!user || !selectedEvent) return;
 
     setDeleting(true);
 
     try {
       await deleteDoc(doc(db, "users", user.uid, "events", selectedEvent.id));
-      setEvents((prev) => prev.filter((event) => event.id !== selectedEvent.id));
+
+      setEvents((prevEvents) =>
+        prevEvents.filter((event) => event.id !== selectedEvent.id)
+      );
+
       setSelectedEvent(null);
     } catch (error) {
       console.error("Error deleting event:", error);
@@ -101,64 +182,49 @@ export default function PastEventsPage() {
 
   return (
     <>
-      <main className="min-h-screen bg-[#FFF8EF] flex">
+      <main className="flex min-h-screen bg-[#FFF8EF]">
         <Sidebar />
 
         <section className="flex-1 p-8">
           <div className="max-w-5xl">
-            <h1 className="text-3xl font-semibold text-[#171717] mb-2">
-              Past Events
-            </h1>
-            <p className="text-[#6B7280] mb-8">
-              A look back at your past plans.
-            </p>
+            <div className="mb-8 flex items-start justify-between gap-4">
+              <div>
+                <h1 className="mb-2 text-3xl font-semibold text-[#171717]">
+                  Past Events
+                </h1>
+                <p className="text-[#6B7280]">
+                  A look back at your past plans.
+                </p>
+              </div>
+
+              {pastEvents.length > 2 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAll((prev) => !prev)}
+                  className="rounded-full border border-[#E8DCC8] bg-white px-4 py-2 text-sm font-semibold text-[#6B7280] transition hover:bg-[#FFF8EF]"
+                >
+                  {showAll ? "Show less" : "See all"}
+                </button>
+              )}
+            </div>
 
             {loadingEvents ? (
-              <div className="rounded-3xl bg-white p-8 border border-[#F0E7D8]">
+              <PageState>
                 <p className="text-[#6B7280]">Loading...</p>
-              </div>
+              </PageState>
             ) : pastEvents.length === 0 ? (
-              <div className="rounded-3xl bg-white p-8 text-center border border-[#F0E7D8]">
+              <PageState centered>
                 <p className="text-[#8C8791]">No past events yet.</p>
-              </div>
+              </PageState>
             ) : (
               <div className="space-y-4">
-                {pastEvents.map((event) => (
-                  <div
+                {visiblePastEvents.map((event) => (
+                  <PastEventCard
                     key={event.id}
-                    className="rounded-2xl bg-white border border-[#F0E7D8] p-5 flex justify-between items-center gap-4 opacity-80"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm text-[#8C8791] font-medium">
-                        {formatEventDate(event.date)}
-                        {event.startTime ? ` • ${event.startTime}` : ""}
-                      </p>
-
-                      <h2 className="text-xl font-semibold text-[#5C5C5C] truncate">
-                        {event.eventName || "Untitled Event"}
-                      </h2>
-
-                      <p className="text-[#8C8791] text-sm truncate">
-                        {event.theme || "No theme"}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-3 shrink-0">
-                      <button
-                        onClick={() => router.push(`/events/${event.id}`)}
-                        className="rounded-full bg-[#E9E2D4] px-5 py-3 text-sm font-semibold text-[#6F675D] hover:bg-[#ddd3c1] transition"
-                      >
-                        View
-                      </button>
-
-                      <button
-                        onClick={() => setSelectedEvent(event)}
-                        className="rounded-full bg-[#F9E1DC] px-5 py-3 text-sm font-semibold text-[#B85C47] hover:bg-[#f3d1ca] transition"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
+                    event={event}
+                    onView={() => router.push(`/events/${event.id}`)}
+                    onDelete={() => setSelectedEvent(event)}
+                  />
                 ))}
               </div>
             )}
@@ -166,16 +232,16 @@ export default function PastEventsPage() {
         </section>
       </main>
 
-      {/* DELETE CONFIRMATION MODAL */}
       <ConfirmationModal
         isOpen={!!selectedEvent}
         title="Delete event?"
-        description={`Are you sure you want to delete "${selectedEvent?.eventName || "this event"}"? This action cannot be undone.`}
+        description={`Are you sure you want to delete "${selectedEvent?.eventName || "this event"
+          }"? This action cannot be undone.`}
         confirmText="Delete"
         onClose={() => {
           if (!deleting) setSelectedEvent(null);
         }}
-        onConfirm={confirmDelete}
+        onConfirm={handleDeleteConfirm}
         loading={deleting}
         confirmButtonClassName="bg-[#F9E1DC] text-[#B85C47] hover:bg-[#f3d1ca]"
       />

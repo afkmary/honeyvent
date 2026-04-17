@@ -4,6 +4,10 @@ import { CalendarDays, Clock3, Palette } from "lucide-react";
 import { formatEventDateRange, formatTimeRange } from "../utils";
 
 export default function EventHeaderDisplay({ eventData, headerError }) {
+  const timeText = eventData?.allDay
+    ? "All Day"
+    : formatTimeRange(eventData?.startTime, eventData?.endTime);
+
   return (
     <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-6">
       <div>
@@ -35,7 +39,7 @@ export default function EventHeaderDisplay({ eventData, headerError }) {
 
         <div className="flex items-center gap-2 text-[#6B7280]">
           <Clock3 size={16} />
-          <span>{formatTimeRange(eventData?.startTime, eventData?.endTime)}</span>
+          <span>{timeText}</span>
         </div>
       </div>
     </div>
