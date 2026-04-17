@@ -3,17 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import {
-  CalendarDays,
-  Clock3,
-  Palette,
-  Users,
-  CheckSquare,
-  StickyNote,
-} from "lucide-react";
+import { Users, CheckSquare, StickyNote } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useUserAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/sidebar";
+import EventHeaderCard from "./_components/EventHeaderCard";
+import GuestListCard from "./_components/GuestListCard";
+import ChecklistCard from "./_components/ChecklistCard";
+import NotesCard from "./_components/NotesCard";
 
 export default function EventDetailsPage() {
   const { user } = useUserAuth();
@@ -76,24 +73,6 @@ export default function EventDetailsPage() {
     () => (Array.isArray(eventData?.notes) ? eventData.notes : []),
     [eventData]
   );
-
-  function formatEventDate(dateString) {
-    if (!dateString) return "No date set";
-
-    const date = new Date(`${dateString}T00:00:00`);
-    return date.toLocaleDateString("en-CA", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    });
-  }
-
-  function formatTimeRange(start, end) {
-    if (!start && !end) return "No time set";
-    if (start && end) return `${start} - ${end}`;
-    return start || end;
-  }
 
   async function saveField(fieldName, newValue, sectionName) {
     if (!user || !eventId) return;
@@ -221,232 +200,44 @@ export default function EventDetailsPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="rounded-4xl bg-white shadow-sm border border-[#F0E7D8] overflow-hidden">
-              <div className="h-55 bg-linear-to-r from-[#F6D37A] via-[#F4B942] to-[#E8C867]" />
-
-              <div className="p-8">
-                <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-6">
-                  <div>
-                    <h1 className="text-4xl font-semibold text-[#171717] mb-3">
-                      {eventData.eventName || "Untitled Event"}
-                    </h1>
-
-                    <div className="flex items-center gap-2 text-[#6B7280] mb-2">
-                      <Palette size={16} />
-                      <span>
-                        Theme: {eventData.theme?.trim() || "No theme set"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="rounded-3xl bg-[#FFF8EF] border border-[#F3E6CB] px-5 py-4 min-w-65">
-                    <div className="flex items-center gap-2 text-[#C98C00] mb-2">
-                      <CalendarDays size={16} />
-                      <span className="font-medium">
-                        {formatEventDate(eventData.date)}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-[#6B7280]">
-                      <Clock3 size={16} />
-                      <span>{formatTimeRange(eventData.startTime, eventData.endTime)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <EventHeaderCard
+              user={user}
+              eventId={eventId}
+              eventData={eventData}
+              setEventData={setEventData}
+            />
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              <GuestListCard
+                guestList={guestList}
+                guestInput={guestInput}
+                setGuestInput={setGuestInput}
+                addGuest={addGuest}
+                removeGuest={removeGuest}
+                saving={savingSection === "guest"}
+                icon={Users}
+              />
 
-              {/* GUESTLIST */}
-              <div className="rounded-[28px] bg-white p-6 shadow-sm border border-[#F0E7D8] overflow-hidden">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="flex items-center gap-2 text-xl font-semibold text-[#171717]">
-                    <Users size={18} />
-                    Guest List
-                  </h2>
+              <ChecklistCard
+                checklist={checklist}
+                checklistInput={checklistInput}
+                setChecklistInput={setChecklistInput}
+                addChecklistItem={addChecklistItem}
+                removeChecklistItem={removeChecklistItem}
+                toggleChecklistItem={toggleChecklistItem}
+                saving={savingSection === "checklist"}
+                icon={CheckSquare}
+              />
 
-                  <span className="text-xs bg-[#FFF3D6] text-[#C98C00] px-3 py-1 rounded-full font-semibold">
-                    {guestList.length}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 mb-4 w-full max-w-100 mx-auto">
-                  <input
-                    type="text"
-                    value={guestInput}
-                    onChange={(e) => setGuestInput(e.target.value)}
-                    placeholder="Add guest"
-                    className="min-w-0 flex-1 rounded-full border border-[#E8DCC8] bg-[#FFFDF8] px-3 py-2 text-sm text-[#171717] placeholder:text-[#C4B8A5] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
-                  />
-                  <button
-                    type="button"
-                    onClick={addGuest}
-                    disabled={savingSection === "guest"}
-                    className="shrink-0 rounded-full bg-[#F4B942] px-3 py-2 text-xs font-bold text-white shadow-sm hover:scale-105 hover:bg-[#e5a932] transition disabled:opacity-70"
-                  >
-                    +
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  {guestList.length === 0 ? (
-                    <p className="text-sm text-[#8C8791]">No guests added yet.</p>
-                  ) : (
-                    guestList.map((guest, index) => (
-                      <div
-                        key={`${guest.name}-${index}`}
-                        className="rounded-2xl bg-[#FFF8EF] border border-[#F3E6CB] px-4 py-3 flex items-center justify-between"
-                      >
-                        <div>
-                          <p className="text-[#171717] font-medium">{guest.name}</p>
-                          <p className="text-sm text-[#8C8791] capitalize">
-                            {guest.status || "invited"}
-                          </p>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => removeGuest(index)}
-                          className="text-sm text-[#D47D69] hover:text-[#bb5f49] transition"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* CHECKLIST*/}
-              <div className="rounded-[28px] bg-white p-6 shadow-sm border border-[#F0E7D8] overflow-hidden">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="flex items-center gap-2 text-xl font-semibold text-[#171717]">
-                    <CheckSquare size={18} />
-                    Checklist
-                  </h2>
-
-                  <span className="text-xs bg-[#FFF3D6] text-[#C98C00] px-3 py-1 rounded-full font-semibold">
-                    {checklist.length}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 mb-4 w-full max-w-100 mx-auto">
-                  <input
-                    type="text"
-                    value={checklistInput}
-                    onChange={(e) => setChecklistInput(e.target.value)}
-                    placeholder="Add task"
-                    className="min-w-0 flex-1 rounded-full border border-[#E8DCC8] bg-[#FFFDF8] px-3 py-2 text-sm text-[#171717] placeholder:text-[#C4B8A5] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
-                  />
-                  <button
-                    type="button"
-                    onClick={addChecklistItem}
-                    disabled={savingSection === "checklist"}
-                    className="shrink-0 rounded-full bg-[#F4B942] px-3 py-2 text-xs font-bold text-white shadow-sm hover:scale-105 hover:bg-[#e5a932] transition disabled:opacity-70"
-                  >
-                    +
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  {checklist.length === 0 ? (
-                    <p className="text-sm text-[#8C8791]">No tasks added yet.</p>
-                  ) : (
-                    checklist.map((item, index) => (
-                      <div
-                        key={`${item.text}-${index}`}
-                        className="rounded-2xl bg-[#FFF8EF] border border-[#F3E6CB] px-4 py-3 flex items-center justify-between gap-3"
-                      >
-                        <div className="flex items-start gap-3">
-                          <input
-                            type="checkbox"
-                            checked={!!item.completed}
-                            onChange={() => toggleChecklistItem(index)}
-                            className="mt-1 accent-[#F4B942]"
-                          />
-                          <div>
-                            <p
-                              className={`font-medium ${item.completed
-                                ? "text-[#8C8791] line-through"
-                                : "text-[#171717]"
-                                }`}
-                            >
-                              {item.text}
-                            </p>
-                            <p className="text-sm text-[#8C8791]">
-                              {item.completed ? "Completed" : "Pending"}
-                            </p>
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => removeChecklistItem(index)}
-                          className="text-sm text-[#D47D69] hover:text-[#bb5f49] transition"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* NOTES */}
-              <div className="rounded-[28px] bg-white p-6 shadow-sm border border-[#F0E7D8] overflow-hidden">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="flex items-center gap-2 text-xl font-semibold text-[#171717]">
-                    <StickyNote size={18} />
-                    Notes
-                  </h2>
-
-                  <span className="text-xs bg-[#FFF3D6] text-[#C98C00] px-3 py-1 rounded-full font-semibold">
-                    {notes.length}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 mb-4 w-full max-w-100 mx-auto">
-                  <input
-                    type="text"
-                    value={notesInput}
-                    onChange={(e) => setNotesInput(e.target.value)}
-                    placeholder="Add note"
-                    className="min-w-0 flex-1 rounded-full border border-[#E8DCC8] bg-[#FFFDF8] px-3 py-2 text-sm text-[#171717] placeholder:text-[#C4B8A5] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
-                  />
-                  <button
-                    type="button"
-                    onClick={addNote}
-                    disabled={savingSection === "note"}
-                    className="shrink-0 rounded-full bg-[#F4B942] px-3 py-2 text-xs font-bold text-white shadow-sm hover:scale-105 hover:bg-[#e5a932] transition disabled:opacity-70"
-                  >
-                    +
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  {notes.length === 0 ? (
-                    <p className="text-sm text-[#8C8791]">No notes added yet.</p>
-                  ) : (
-                    notes.map((note, index) => (
-                      <div
-                        key={`${note.text}-${index}`}
-                        className="rounded-2xl bg-[#FFF8EF] border border-[#F3E6CB] px-4 py-3 flex items-center justify-between"
-                      >
-                        <p className="text-[#171717]">{note.text}</p>
-
-                        <button
-                          type="button"
-                          onClick={() => removeNote(index)}
-                          className="text-sm text-[#D47D69] hover:text-[#bb5f49] transition"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
+              <NotesCard
+                notes={notes}
+                notesInput={notesInput}
+                setNotesInput={setNotesInput}
+                addNote={addNote}
+                removeNote={removeNote}
+                saving={savingSection === "note"}
+                icon={StickyNote}
+              />
             </div>
           </div>
         )}

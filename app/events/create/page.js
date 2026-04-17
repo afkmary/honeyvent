@@ -3,18 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import {
-  CalendarDays,
-  Clock3,
-  Palette,
-  Type,
-  Users,
-  CheckSquare,
-  StickyNote,
-} from "lucide-react";
-import { db } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, storage } from "@/lib/firebase";
 import { useUserAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/sidebar";
+import CreateEventMainForm from "./_components/CreateEventMainForm";
+import CreateGuestListCard from "./_components/CreateGuestListCard";
+import CreateChecklistCard from "./_components/CreateChecklistCard";
+import CreateNotesCard from "./_components/CreateNotesCard";
 
 export default function CreateEventPage() {
   const { user } = useUserAuth();
@@ -22,9 +18,17 @@ export default function CreateEventPage() {
 
   const [eventName, setEventName] = useState("");
   const [theme, setTheme] = useState("");
-  const [date, setDate] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
+
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const [startHour, setStartHour] = useState("12");
+  const [startMinute, setStartMinute] = useState("00");
+  const [startPeriod, setStartPeriod] = useState("AM");
+
+  const [endHour, setEndHour] = useState("12");
+  const [endMinute, setEndMinute] = useState("00");
+  const [endPeriod, setEndPeriod] = useState("AM");
 
   const [guestInput, setGuestInput] = useState("");
   const [checklistInput, setChecklistInput] = useState("");
@@ -33,6 +37,9 @@ export default function CreateEventPage() {
   const [guestList, setGuestList] = useState([]);
   const [checklist, setChecklist] = useState([]);
   const [notes, setNotes] = useState([]);
+
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -104,23 +111,41 @@ export default function CreateEventPage() {
     e.preventDefault();
     setError("");
 
-    if (!eventName.trim() || !date) {
-      setError("Please enter an event name and date.");
+    if (!eventName.trim() || !startDate) {
+      setError("Please enter an event name and start date.");
       return;
     }
 
     setSaving(true);
 
     try {
+      let coverImage = "";
+
+      if (imageFile) {
+        const fileName = `${Date.now()}-${imageFile.name}`;
+        const imageRef = ref(
+          storage,
+          `users/${user.uid}/event-banners/${fileName}`
+        );
+
+        await uploadBytes(imageRef, imageFile);
+        coverImage = await getDownloadURL(imageRef);
+      }
+
+      const startTime = `${startHour}:${startMinute} ${startPeriod}`;
+      const endTime = `${endHour}:${endMinute} ${endPeriod}`;
+      const finalEndDate = endDate || startDate;
+
       const eventsRef = collection(db, "users", user.uid, "events");
 
       const docRef = await addDoc(eventsRef, {
         eventName: eventName.trim(),
         theme: theme.trim(),
-        date,
+        startDate,
+        endDate: finalEndDate,
         startTime,
         endTime,
-        coverImage: "",
+        coverImage,
         guestList,
         checklist,
         notes,
@@ -150,239 +175,58 @@ export default function CreateEventPage() {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="rounded-[28px] bg-white p-6 shadow-sm border border-[#F0E7D8]">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="md:col-span-2">
-                  <label className="flex items-center gap-2 text-sm font-medium text-[#171717] mb-2">
-                    <Type size={16} />
-                    Event Name
-                  </label>
-                  <input
-                    type="text"
-                    value={eventName}
-                    onChange={(e) => setEventName(e.target.value)}
-                    placeholder="Ex. Garden Tea Birthday"
-                    className="w-full rounded-2xl border border-[#E8DCC8] bg-white px-4 py-3 text-[#171717] placeholder:text-[#B6B6B6] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-[#171717] mb-2">
-                    <Palette size={16} />
-                    Theme
-                  </label>
-                  <input
-                    type="text"
-                    value={theme}
-                    onChange={(e) => setTheme(e.target.value)}
-                    placeholder="Ex. Yellow & Brown"
-                    className="w-full rounded-2xl border border-[#E8DCC8] bg-white px-4 py-3 text-[#171717] placeholder:text-[#B6B6B6] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
-                  />
-                </div>
-
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-[#171717] mb-2">
-                    <CalendarDays size={16} />
-                    Date
-                  </label>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full rounded-2xl border border-[#E8DCC8] bg-white px-4 py-3 text-[#171717] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-[#171717] mb-2">
-                    <Clock3 size={16} />
-                    Start Time
-                  </label>
-                  <input
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    className="w-full rounded-2xl border border-[#E8DCC8] bg-white px-4 py-3 text-[#171717] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
-                  />
-                </div>
-
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-[#171717] mb-2">
-                    <Clock3 size={16} />
-                    End Time
-                  </label>
-                  <input
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    className="w-full rounded-2xl border border-[#E8DCC8] bg-white px-4 py-3 text-[#171717] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
-                  />
-                </div>
-              </div>
-            </div>
+            <CreateEventMainForm
+              eventName={eventName}
+              setEventName={setEventName}
+              theme={theme}
+              setTheme={setTheme}
+              startDate={startDate}
+              setStartDate={setStartDate}
+              endDate={endDate}
+              setEndDate={setEndDate}
+              startHour={startHour}
+              setStartHour={setStartHour}
+              startMinute={startMinute}
+              setStartMinute={setStartMinute}
+              startPeriod={startPeriod}
+              setStartPeriod={setStartPeriod}
+              endHour={endHour}
+              setEndHour={setEndHour}
+              endMinute={endMinute}
+              setEndMinute={setEndMinute}
+              endPeriod={endPeriod}
+              setEndPeriod={setEndPeriod}
+              imageFile={imageFile}
+              setImageFile={setImageFile}
+              imagePreview={imagePreview}
+              setImagePreview={setImagePreview}
+              setError={setError}
+            />
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              <CreateGuestListCard
+                guestList={guestList}
+                guestInput={guestInput}
+                setGuestInput={setGuestInput}
+                addGuest={addGuest}
+                removeGuest={removeGuest}
+              />
 
-              {/* GUEST LIST CARD */}
-              <div className="rounded-[28px] bg-white p-6 shadow-sm border border-[#F0E7D8] overflow-hidden">
-                <label className="flex items-center justify-between text-lg font-semibold text-[#171717] mb-4">
-                  <span className="flex items-center gap-2">
-                    <Users size={18} />
-                    Guest List
-                  </span>
+              <CreateChecklistCard
+                checklist={checklist}
+                checklistInput={checklistInput}
+                setChecklistInput={setChecklistInput}
+                addChecklistItem={addChecklistItem}
+                removeChecklistItem={removeChecklistItem}
+              />
 
-                  <span className="text-xs bg-[#FFF3D6] text-[#C98C00] px-3 py-1 rounded-full">
-                    {guestList.length}
-                  </span>
-                </label>
-
-                <div className="flex items-center gap-2 mb-4 w-full max-w-80 mx-auto">
-                  <input
-                    type="text"
-                    value={guestInput}
-                    onChange={(e) => setGuestInput(e.target.value)}
-                    placeholder="Add guest"
-                    className="min-w-0 flex-1 rounded-full border border-[#E8DCC8] bg-[#FFFDF8] px-3 py-2 text-sm text-[#171717] placeholder:text-[#C4B8A5] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
-                  />
-                  <button
-                    type="button"
-                    onClick={addGuest}
-                    className="shrink-0 rounded-full bg-[#F4B942] px-3 py-2 text-xs font-bold text-white shadow-sm hover:scale-105 hover:bg-[#e5a932] transition"
-                  >
-                    +
-                  </button>
-                </div>
-
-                <div className="space-y-2">
-                  {guestList.length === 0 ? (
-                    <p className="text-sm text-[#8C8791]">No guests added yet.</p>
-                  ) : (
-                    guestList.map((guest, index) => (
-                      <div
-                        key={`${guest.name}-${index}`}
-                        className="flex items-center justify-between rounded-2xl bg-[#FFF8EF] border border-[#F3E6CB] px-4 py-3"
-                      >
-                        <span className="text-[#171717]">{guest.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeGuest(index)}
-                          className="text-sm text-[#D47D69] hover:text-[#bb5f49] transition"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* CHECKLIST CARD */}
-              <div className="rounded-[28px] bg-white p-6 shadow-sm border border-[#F0E7D8] overflow-hidden">
-                <label className="flex items-center justify-between text-lg font-semibold text-[#171717] mb-4">
-                  <span className="flex items-center gap-2">
-                    <CheckSquare size={18} />
-                    Checklist
-                  </span>
-
-                  <span className="text-xs bg-[#FFF3D6] text-[#C98C00] px-3 py-1 rounded-full">
-                    {checklist.length}
-                  </span>
-                </label>
-
-                <div className="flex items-center gap-2 mb-4 w-full max-w-80 mx-auto">
-                  <input
-                    type="text"
-                    value={checklistInput}
-                    onChange={(e) => setChecklistInput(e.target.value)}
-                    placeholder="Add task"
-                    className="min-w-0 flex-1 rounded-full border border-[#E8DCC8] bg-[#FFFDF8] px-3 py-2 text-sm text-[#171717] placeholder:text-[#C4B8A5] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
-                  />
-                  <button
-                    type="button"
-                    onClick={addChecklistItem}
-                    className="shrink-0 rounded-full bg-[#F4B942] px-3 py-2 text-xs font-bold text-white shadow-sm hover:scale-105 hover:bg-[#e5a932] transition"
-                  >
-                    +
-                  </button>
-                </div>
-
-                <div className="space-y-2">
-                  {checklist.length === 0 ? (
-                    <p className="text-sm text-[#8C8791]">No tasks added yet.</p>
-                  ) : (
-                    checklist.map((item, index) => (
-                      <div
-                        key={`${item.text}-${index}`}
-                        className="flex items-center justify-between rounded-2xl bg-[#FFF8EF] border border-[#F3E6CB] px-4 py-3"
-                      >
-                        <span className="text-[#171717]">{item.text}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeChecklistItem(index)}
-                          className="text-sm text-[#D47D69] hover:text-[#bb5f49] transition"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* NOTES CARD */}
-              <div className="rounded-[28px] bg-white p-6 shadow-sm border border-[#F0E7D8] overflow-hidden">
-                <label className="flex items-center justify-between text-lg font-semibold text-[#171717] mb-4">
-                  <span className="flex items-center gap-2">
-                    <StickyNote size={18} />
-                    Notes
-                  </span>
-
-                  <span className="text-xs bg-[#FFF3D6] text-[#C98C00] px-3 py-1 rounded-full">
-                    {notes.length}
-                  </span>
-                </label>
-
-                <div className="flex items-center gap-2 mb-4 w-full max-w-80 mx-auto">
-                  <input
-                    type="text"
-                    value={notesInput}
-                    onChange={(e) => setNotesInput(e.target.value)}
-                    placeholder="Add note"
-                    className="min-w-0 flex-1 rounded-full border border-[#E8DCC8] bg-[#FFFDF8] px-3 py-2 text-sm text-[#171717] placeholder:text-[#C4B8A5] outline-none focus:border-[#F4B942] focus:ring-2 focus:ring-[#F4B942]/20"
-                  />
-                  <button
-                    type="button"
-                    onClick={addNote}
-                    className="shrink-0 rounded-full bg-[#F4B942] px-3 py-2 text-xs font-bold text-white shadow-sm hover:scale-105 hover:bg-[#e5a932] transition"
-                  >
-                    +
-                  </button>
-                </div>
-
-                <div className="space-y-2">
-                  {notes.length === 0 ? (
-                    <p className="text-sm text-[#8C8791]">No notes added yet.</p>
-                  ) : (
-                    notes.map((note, index) => (
-                      <div
-                        key={`${note.text}-${index}`}
-                        className="flex items-center justify-between rounded-2xl bg-[#FFF8EF] border border-[#F3E6CB] px-4 py-3"
-                      >
-                        <span className="text-[#171717]">{note.text}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeNote(index)}
-                          className="text-sm text-[#D47D69] hover:text-[#bb5f49] transition"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
+              <CreateNotesCard
+                notes={notes}
+                notesInput={notesInput}
+                setNotesInput={setNotesInput}
+                addNote={addNote}
+                removeNote={removeNote}
+              />
             </div>
 
             {error ? <p className="text-sm text-red-500">{error}</p> : null}

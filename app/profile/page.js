@@ -121,7 +121,9 @@ export default function ProfilePage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!user || !auth.currentUser) return;
+
+    const currentUser = auth.currentUser;
+    if (!user || !currentUser) return;
 
     setSaving(true);
     setError("");
@@ -157,13 +159,13 @@ export default function ProfilePage() {
     }
 
     try {
-      let photoURL = user.photoURL || "";
+      let photoURL = currentUser.photoURL || "";
 
       if (selectedFile) {
         const fileExtension = selectedFile.name.split(".").pop() || "png";
         const storageRef = ref(
           storage,
-          `profilePictures/${user.uid}/avatar.${fileExtension}`
+          `profilePictures/${currentUser.uid}/avatar.${fileExtension}`
         );
 
         await uploadBytes(storageRef, selectedFile, {
@@ -173,24 +175,32 @@ export default function ProfilePage() {
         photoURL = await getDownloadURL(storageRef);
       }
 
-      await updateProfile(auth.currentUser, {
-        displayName: fullName,
-        photoURL,
-      });
+      const profileNeedsUpdate =
+        fullName !== (currentUser.displayName || "") ||
+        photoURL !== (currentUser.photoURL || "");
 
-      if (trimmedEmail !== user.email) {
-        await updateEmail(auth.currentUser, trimmedEmail);
+      if (profileNeedsUpdate) {
+        await updateProfile(currentUser, {
+          displayName: fullName,
+          photoURL,
+        });
       }
 
-      if (newPassword) {
-        await updatePassword(auth.currentUser, newPassword);
+      if (trimmedEmail !== (currentUser.email || "")) {
+        await updateEmail(currentUser, trimmedEmail);
+      }
+
+      if (newPassword.trim()) {
+        await updatePassword(currentUser, newPassword);
       }
 
       setMessage("Profile updated successfully.");
       setSelectedFile(null);
       setNewPassword("");
       setConfirmPassword("");
-      router.refresh();
+      setShowPasswordFields(false);
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
     } catch (err) {
       console.error(err);
 
@@ -243,7 +253,6 @@ export default function ProfilePage() {
                   )}
                 </div>
 
-                {/* PROFILE PIC */}
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-[#171717]">
                     Profile Picture
@@ -260,7 +269,6 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* NAME */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-medium text-[#171717] mb-2">
@@ -291,7 +299,6 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* EMAIL */}
               <div>
                 <label className="block text-sm font-medium text-[#171717] mb-2">
                   Email
@@ -306,7 +313,6 @@ export default function ProfilePage() {
                 />
               </div>
 
-              {/* PASSWORD */}
               <div>
                 {!showPasswordFields ? (
                   <button
