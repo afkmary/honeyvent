@@ -55,7 +55,7 @@ function PastEventCard({ event, onView, onDelete }) {
   const displayDate = getEventDisplayDate(event);
 
   return (
-    <div className="h-[9.5rem] rounded-2xl border border-[#F0E7D8] bg-white p-5 flex items-center justify-between gap-4 overflow-hidden opacity-80">
+    <div className="h-38 rounded-2xl border border-[#F0E7D8] bg-white p-5 flex items-center justify-between gap-4 overflow-hidden opacity-80">
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-[#8C8791] truncate">
           {formatEventDate(displayDate)}
